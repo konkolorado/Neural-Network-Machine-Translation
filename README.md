@@ -1,3 +1,3 @@
 # Neural-Network-Machine-Translation
 This is a short description. MT using Neural Networks between low-data
-langauges.
+langauges. Continuation of work done in JSALT '15.
