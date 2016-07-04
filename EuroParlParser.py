@@ -13,6 +13,8 @@ Moses decoder only compatible with:
 import os
 import subprocess
 
+import nltk.data
+
 class EuroParlParser(object):
     def __init__(self, lang1_dir, lang2_dir):
         self.lang1_dir = lang1_dir
@@ -38,20 +40,31 @@ class EuroParlParser(object):
         file1 = open(self.lang1_dir)
         file2 = open(self.lang2_dir)
         for line1, line2 in zip(file1, file2):
-            line1 = line1.strip().lower()
-            line2 = line2.strip().lower()
+            line1 = self._strip_nonascii(line1.strip().lower())
+            line2 = self._strip_nonascii(line2.strip().lower())
             self.lang1.append(line1), self.lang2.append(line2)
 
         assert len(self.lang1) == len(self.lang2), "Unequal language sizes"
         assert len(self.lang1) and len(self.lang2), "Got language of size 0"
 
-    def _split_sentences(self, line):
+    def _strip_nonascii(self, b):
         """
-        Given a string, attempts to split into distinct sentences based on
-        punctuation
+        Code to remove non-ascii characters from textfiles.
+        Taken from jedwards on StackOverflow.
+        """
+        return b.decode('ascii', errors='ignore')
+
+    def split_sentences(self):
+        """
+        Splits the language into sentences
         """
         #TODO
-        #Import from NLTK
+        #NOTE Tokenize before this to improve sentence splitting
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        lang1 = ''.join(self.lang1)
+        lang2 = ''.join(self.lang2)
+        print '\n-----\n'.join(tokenizer.tokenize(lang1))
+        #print '\n-----\n'.join(tokenizer.tokenize(lang2))
 
     def clean_corpus(self):
         """
@@ -103,9 +116,10 @@ def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
     lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
     euro_parser = EuroParlParser(lang1, lang2)
-    euro_parser.clean_corpus()
-    euro_parser.create_vocab()
-    print euro_parser.vocab_to_list()[0]
+    euro_parser.split_sentences()
+    #euro_parser.clean_corpus()
+    #euro_parser.create_vocab()
+    #print euro_parser.vocab_to_list()[0]
 
 if __name__ == '__main__':
     main()
