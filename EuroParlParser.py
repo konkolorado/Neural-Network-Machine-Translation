@@ -9,66 +9,94 @@ Moses decoder only compatible with:
     - all words must be lowercased
     - 1 sentence per line, no empty lines
     - sentences no longer than 100 words
+
+1) Tokenize
+2) Lowercase, remove > 100 word lines, 1 sentence per line, clear non-ascii
+
 """
 import os
+import sys
 import subprocess
 
-import nltk.data
+NUM_CPUS = 4
 
 class EuroParlParser(object):
     def __init__(self, lang1_dir, lang2_dir):
         self.lang1_dir = lang1_dir
         self.lang2_dir = lang2_dir
-        self._lang_files_exist()
-        self._load_langs()
+        self._check_lang_files_exist()
+
+        if self._no_tokenized_data_exists():
+            self._force_print("No tokenized data found. Tokenizing...")
+            self._tokenize()
+        self._load_tokenized_data()
+
+
 
     def __str__(self):
         return "{}\n{}".format(self.lang1_dir, self.lang2_dir)
 
-    def _lang_files_exist(self):
+    def _check_lang_files_exist(self):
         assert os.path.exists(self.lang1_dir), \
             "{} file not found".format(self.lang1_dir)
         assert os.path.exists(self.lang2_dir), \
             "{} file not found".format(self.lang2_dir)
 
-    def _load_langs(self):
+    def _no_tokenized_data_exists(self):
         """
-        Loads language data from files into class matrices with a
-        correspondence between indices in each matrix. Lowercases words here
+        Determines if tokenized data exists. If so, this function does nothing.
+        If not, this function proceeds to tokenize the data
         """
-        self.lang1, self.lang2 = [], []
-        file1 = open(self.lang1_dir)
-        file2 = open(self.lang2_dir)
-        for line1, line2 in zip(file1, file2):
-            line1 = self._strip_nonascii(line1.strip().lower())
-            line2 = self._strip_nonascii(line2.strip().lower())
-            self.lang1.append(line1), self.lang2.append(line2)
+        tokdat1 = self._make_filename_from_filepath(self.lang1_dir)
+        tokdat2 = self._make_filename_from_filepath(self.lang2_dir)
+        if os.path.exists('data/{}.tok'.format(tokdat1)) and \
+           os.path.exists('data/{}.tok'.format(tokdat2)):
+            return False
+        return True
 
-        assert len(self.lang1) == len(self.lang2), "Unequal language sizes"
-        assert len(self.lang1) and len(self.lang2), "Got language of size 0"
+    def _tokenize(self):
+        """
+        Given a list of sentences, we tokenize using the mosesdecoder script
+        to split the symbols in the sentences to be space-delimited
+        """
+        self._make_dir("data/")
+        self.raw_data = []
 
-    def _strip_nonascii(self, b):
-        """
-        Code to remove non-ascii characters from textfiles.
-        Taken from jedwards on StackOverflow.
-        """
-        return b.decode('ascii', errors='ignore')
+        for directory in [self.lang1_dir, self.lang2_dir]:
+            new_data = self._make_filename_from_filepath(directory)
+            command =  "/Users/urielmandujano/tools/mosesdecoder/scripts/" + \
+                        "tokenizer/tokenizer.perl -q -threads " + \
+                        "{} ".format(NUM_CPUS) + "< {}".format(directory) + \
+                        " > {}".format("data/" + new_data + ".tok")
+            subprocess.call(command, shell=True)
 
-    def split_sentences(self):
+    def _load_tokenized_data(self):
         """
-        Splits the language into sentences
+        Loads existing tokenized data into memory. Saves needless re-comp
         """
-        #TODO
-        #NOTE Tokenize before this to improve sentence splitting
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-        lang1 = ''.join(self.lang1)
-        lang2 = ''.join(self.lang2)
-        print '\n-----\n'.join(tokenizer.tokenize(lang1))
-        #print '\n-----\n'.join(tokenizer.tokenize(lang2))
+        new_class_vars = ['lang1_tokenized', 'lang2_tokenized']
+        directories = [self.lang1_dir, self.lang2_dir]
+
+        for var, d in zip(new_class_vars, directories):
+            tok_data = self._make_filename_from_filepath(d)
+            parsed = self._parse_tokenized_data("data/" + tok_data + ".tok")
+            setattr(self, var, parsed)
+
+        self._assert_equal_lens(self.lang1_tokenized, self.lang2_tokenized)
+
+    def _parse_tokenized_data(self, tokdata_filename):
+        """
+        Given the tokenized data's filename and a counter, this function
+        parses the data and returns it.
+        """
+        with open(tokdata_filename, 'r') as datafile:
+            return datafile.read().split('\n')
 
     def clean_corpus(self):
         """
+        NOT WORKING
         Drop lines that are empty, too short, or too long.
+        """
         """
         min_line_len = 0
         max_line_len = 100
@@ -84,6 +112,7 @@ class EuroParlParser(object):
 
         for i in pop_indices[::-1]:
             self.lang1.pop(i), self.lang2.pop(i)
+        """
 
     def create_vocab(self):
         """
@@ -112,14 +141,46 @@ class EuroParlParser(object):
         return sorted(self.vocab_lang1.keys()), \
                sorted(self.vocab_lang2.keys())
 
+    def _strip_nonascii(self, line):
+        """
+        Code to remove non-ascii characters from textfiles.
+        Taken from jedwards on StackOverflow.
+        """
+        return line.decode('ascii', errors='ignore')
+
+    def _assert_equal_lens(self, item1, item2):
+        """
+        Given two container items, assert that they contain an equal
+        number of items and are non empty
+        """
+        assert len(item1) == len(item2), "Unequal language sizes"
+        assert len(item1) and len(item2), "Got language of size 0"
+
+    def _force_print(self, item):
+        """
+        Force prints the item to stdout
+        """
+        print item
+        sys.stdout.flush()
+
+    def _make_dir(self, path):
+        """
+        Determines if a given path name is a valid directory. If not, makes it
+        """
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+    def _make_filename_from_filepath(self, path):
+        """
+        Given a path to a file, this function finds the filename and returns
+        it
+        """
+        return os.path.split(path)[1]
+
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
     lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
     euro_parser = EuroParlParser(lang1, lang2)
-    euro_parser.split_sentences()
-    #euro_parser.clean_corpus()
-    #euro_parser.create_vocab()
-    #print euro_parser.vocab_to_list()[0]
 
 if __name__ == '__main__':
     main()
