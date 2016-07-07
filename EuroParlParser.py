@@ -18,6 +18,8 @@ import os
 import sys
 import subprocess
 
+import cPickle as pk
+
 NUM_CPUS = 4
 
 class EuroParlParser(object):
@@ -26,12 +28,35 @@ class EuroParlParser(object):
         self.lang2_dir = lang2_dir
         self._check_lang_files_exist()
 
-        if self._no_tokenized_data_exists():
+        """
+        1) make so that cleansed check comes before token check
+        2) make so that you can make 1 tok/cleansed file at a time
+        """
+        if self._data_exists('cleansed'):
+            self._force_print("Loaded cleansed data.")
+
+        elif self._data_exists('tok'):
+            self._force_print("No cleansed data found. Cleaning...")
+            self._load_tokenized_data()
+            self.clean_corpus()
+        else:
+            self._force_print("No tokenized or cleansed data. Processing...")
+            self._tokenize()
+            self._load_tokenized_data()
+            self.clean_corpus()
+
+        self._load_cleansed_data()
+        """
+        if self._no_data_exists('tok'):
             self._force_print("No tokenized data found. Tokenizing...")
             self._tokenize()
         self._load_tokenized_data()
 
-
+        if self._no_data_exists('cleansed'):
+            self._force_print("No cleansed data found. Cleaning...")
+            self.clean_corpus()
+        self._load_cleansed_data()
+        """
 
     def __str__(self):
         return "{}\n{}".format(self.lang1_dir, self.lang2_dir)
@@ -42,17 +67,16 @@ class EuroParlParser(object):
         assert os.path.exists(self.lang2_dir), \
             "{} file not found".format(self.lang2_dir)
 
-    def _no_tokenized_data_exists(self):
+    def _data_exists(self, ext):
         """
-        Determines if tokenized data exists. If so, this function does nothing.
-        If not, this function proceeds to tokenize the data
+        Determines if ext data exists. If so, return True, else False
         """
         tokdat1 = self._make_filename_from_filepath(self.lang1_dir)
         tokdat2 = self._make_filename_from_filepath(self.lang2_dir)
-        if os.path.exists('data/{}.tok'.format(tokdat1)) and \
-           os.path.exists('data/{}.tok'.format(tokdat2)):
-            return False
-        return True
+        if os.path.exists('data/{}.{}'.format(tokdat1, ext)) and \
+           os.path.exists('data/{}.{}'.format(tokdat2, ext)):
+            return True
+        return False
 
     def _tokenize(self):
         """
@@ -60,7 +84,6 @@ class EuroParlParser(object):
         to split the symbols in the sentences to be space-delimited
         """
         self._make_dir("data/")
-        self.raw_data = []
 
         for directory in [self.lang1_dir, self.lang2_dir]:
             new_data = self._make_filename_from_filepath(directory)
@@ -94,34 +117,82 @@ class EuroParlParser(object):
 
     def clean_corpus(self):
         """
-        NOT WORKING
-        Drop lines that are empty, too short, or too long.
-        """
+        Lowercase the entire line, strip the line of non-ascii chars,
+        drop empty lines, short lines, or long lines.
         """
         min_line_len = 0
         max_line_len = 100
         pop_indices = []
-        for i, (l1, l2) in enumerate(zip(self.lang1, self.lang2)):
-            l1, l2 = l1.split(), l2.split()
+        for i, (l1, l2) in enumerate(zip(self.lang1_tokenized, \
+                                         self.lang2_tokenized)):
+            l1, l2 = l1.lower().split(), l2.lower().split()
             if l1 == l2 == []:
                 pop_indices.append(i)
             elif len(l1) <= min_line_len or len(l2) <= min_line_len:
                 pop_indices.append(i)
             elif len(l1) > max_line_len or len(l2) > max_line_len:
                 pop_indices.append(i)
+            else:
+                self.lang1_tokenized[i] = self._strip_nonascii(' '.join(l1))
+                self.lang2_tokenized[i] = self._strip_nonascii(' '.join(l2))
 
         for i in pop_indices[::-1]:
-            self.lang1.pop(i), self.lang2.pop(i)
-        """
+            self.lang1_tokenized.pop(i), self.lang2_tokenized.pop(i)
 
-    def create_vocab(self):
+        self._save_cleansed_data()
+
+    def _save_cleansed_data(self):
+        """
+        Saves newly cleansed data to data/ directory with the .cleansed
+        extension name
+        """
+        self._make_dir("data/")
+        for directory, var in [[self.lang1_dir, self.lang1_tokenized],
+                               [self.lang2_dir, self.lang2_tokenized]]:
+            new_data = self._make_filename_from_filepath(directory)
+            datafile = "data/" + new_data + ".cleansed"
+            self._pickle_data(var, datafile)
+
+    def _pickle_data(self, data, filename):
+        """
+        Pickles the given data in the given filename
+        """
+        outstream = open(filename, 'wb')
+        pk.dump(data, outstream)
+        outstream.close()
+
+    def _load_cleansed_data(self):
+        """
+        Loads existing cleansed data into memory
+        """
+        new_class_vars = ['lang1_cleansed', 'lang2_cleansed']
+        directories = [self.lang1_dir, self.lang2_dir]
+        for var, d in zip(new_class_vars, directories):
+            clean_data = self._make_filename_from_filepath(d)
+            parsed = self._unpickle_data("data/" + clean_data + \
+                                                ".cleansed")
+            setattr(self, var, parsed)
+
+        self._assert_equal_lens(self.lang1_cleansed, self.lang2_cleansed)
+
+    def _unpickle_data(self, filename):
+        """
+        Given a filename, unpickles and returns the data at that file
+        """
+        instream = open(filename, 'rb')
+        data = pk.load(instream)
+        instream.close()
+        return data
+
+    def get_vocab(self):
         """
         Creates a dictionary containing the vocabulary of each language.
         Keys are words, values are counts
         """
-        self.vocab_lang1, self.vocab_lang2 = dict(), dict()
-        self._create_lang_vocab(self.vocab_lang1, self.lang1)
-        self._create_lang_vocab(self.vocab_lang2, self.lang2)
+        self.lang1_vocab, self.lang2_vocab = dict(), dict()
+        self._create_lang_vocab(self.lang1_vocab, self.lang1_cleansed)
+        self._create_lang_vocab(self.lang2_vocab, self.lang2_cleansed)
+        return self.lang1_vocab, self.lang2_vocab
 
     def _create_lang_vocab(self, vocab_lang, lang):
         """
@@ -138,8 +209,8 @@ class EuroParlParser(object):
         Returns a tuple with two entries: a list of the vocabulary in
         language 1 and another list of the vocabulary in language 2
         """
-        return sorted(self.vocab_lang1.keys()), \
-               sorted(self.vocab_lang2.keys())
+        return sorted(self.lang1_vocab.keys()), \
+               sorted(self.lang2_vocab.keys())
 
     def _strip_nonascii(self, line):
         """
@@ -178,9 +249,12 @@ class EuroParlParser(object):
         return os.path.split(path)[1]
 
 def main():
-    lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
-    lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
-    euro_parser = EuroParlParser(lang1, lang2)
+    #lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
+    #lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
+    #euro_parser = EuroParlParser(lang1, lang2)
+    test1 = 'newfile'
+    test2 = 'newfile'
+    EuroParlParser(test1, test2)
 
 if __name__ == '__main__':
     main()
