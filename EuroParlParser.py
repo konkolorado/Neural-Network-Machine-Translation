@@ -12,7 +12,6 @@ Moses decoder only compatible with:
 
 1) Tokenize
 2) Lowercase, remove > 100 word lines, 1 sentence per line, clear non-ascii
-
 """
 import os
 import sys
@@ -28,10 +27,6 @@ class EuroParlParser(object):
         self.lang2_dir = lang2_dir
         self._check_lang_files_exist()
 
-        """
-        1) make so that cleansed check comes before token check
-        2) make so that you can make 1 tok/cleansed file at a time
-        """
         if self._data_exists('cleansed'):
             self._force_print("Loaded cleansed data.")
 
@@ -46,17 +41,6 @@ class EuroParlParser(object):
             self.clean_corpus()
 
         self._load_cleansed_data()
-        """
-        if self._no_data_exists('tok'):
-            self._force_print("No tokenized data found. Tokenizing...")
-            self._tokenize()
-        self._load_tokenized_data()
-
-        if self._no_data_exists('cleansed'):
-            self._force_print("No cleansed data found. Cleaning...")
-            self.clean_corpus()
-        self._load_cleansed_data()
-        """
 
     def __str__(self):
         return "{}\n{}".format(self.lang1_dir, self.lang2_dir)
@@ -87,6 +71,8 @@ class EuroParlParser(object):
 
         for directory in [self.lang1_dir, self.lang2_dir]:
             new_data = self._make_filename_from_filepath(directory)
+            if self._file_exists("data/" + new_data + ".tok"):
+                continue
             command =  "/Users/urielmandujano/tools/mosesdecoder/scripts/" + \
                         "tokenizer/tokenizer.perl -q -threads " + \
                         "{} ".format(NUM_CPUS) + "< {}".format(directory) + \
@@ -115,7 +101,7 @@ class EuroParlParser(object):
         with open(tokdata_filename, 'r') as datafile:
             return datafile.read().split('\n')
 
-    def clean_corpus(self):
+    def _clean_corpus(self):
         """
         Lowercase the entire line, strip the line of non-ascii chars,
         drop empty lines, short lines, or long lines.
@@ -248,13 +234,16 @@ class EuroParlParser(object):
         """
         return os.path.split(path)[1]
 
+    def _file_exists(self, filename):
+        """
+        Returns true if filename exists, else False
+        """
+        return os.path.isfile(filename)
+
 def main():
     #lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
     #lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
-    #euro_parser = EuroParlParser(lang1, lang2)
-    test1 = 'newfile'
-    test2 = 'newfile'
-    EuroParlParser(test1, test2)
+    euro_parser = EuroParlParser(lang1, lang2)
 
 if __name__ == '__main__':
     main()
