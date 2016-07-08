@@ -21,6 +21,7 @@ import os
 import sys
 import subprocess
 
+import random
 import cPickle as pk
 
 NUM_CPUS = 4
@@ -32,7 +33,7 @@ class EuroParlParser(object):
         self._check_lang_files_exist()
 
         if self._data_exists('cleansed'):
-            self._force_print("Loaded cleansed data.")
+            self._force_print("Cleansed data found. Loading...")
 
         elif self._data_exists('tok'):
             self._force_print("No cleansed data found. Cleaning...")
@@ -209,6 +210,32 @@ class EuroParlParser(object):
             self.get_vocab()
             return sorted(self.lang1_vocab.keys()), \
                    sorted(self.lang2_vocab.keys())
+
+    def get_corpus(self):
+        """
+        Returns the text data from both languages as a tuple of lists
+        """
+        return self.lang1_cleansed, self.lang2_cleansed
+
+    def get_random_subset_corpus(self, size):
+        """
+        Returns a size-subset of the corpus data as a tuple of lists
+        """
+        shuf_list = list(zip(self.lang1_cleansed, self.lang2_cleansed))
+        random.shuffle(shuf_list)
+        lang1_copy, lang2_copy = zip(*shuf_list)
+        return lang1_copy[:size], lang2_copy[:size]
+
+    def make_subset_vocab(self, lang1, lang2):
+        """
+        Given a subset of the languages, creates a vocabulary and returns
+        the result as a dictionary whose key is a word and value is the
+        count
+        """
+        lang1_vocab, lang2_vocab = dict(), dict()
+        self._create_lang_vocab(lang1_vocab, lang1)
+        self._create_lang_vocab(lang2_vocab, lang2)
+        return lang1_vocab, lang2_vocab
 
     def _strip_nonascii(self, line):
         """
