@@ -12,6 +12,10 @@ Moses decoder only compatible with:
 
 1) Tokenize
 2) Lowercase, remove > 100 word lines, 1 sentence per line, clear non-ascii
+
+TODO:
+    - add accessors
+    - add statistical methods
 """
 import os
 import sys
@@ -175,10 +179,13 @@ class EuroParlParser(object):
         Creates a dictionary containing the vocabulary of each language.
         Keys are words, values are counts
         """
-        self.lang1_vocab, self.lang2_vocab = dict(), dict()
-        self._create_lang_vocab(self.lang1_vocab, self.lang1_cleansed)
-        self._create_lang_vocab(self.lang2_vocab, self.lang2_cleansed)
-        return self.lang1_vocab, self.lang2_vocab
+        try:
+            return self.lang1_vocab, self.lang2_vocab
+        except AttributeError:
+            self.lang1_vocab, self.lang2_vocab = dict(), dict()
+            self._create_lang_vocab(self.lang1_vocab, self.lang1_cleansed)
+            self._create_lang_vocab(self.lang2_vocab, self.lang2_cleansed)
+            return self.lang1_vocab, self.lang2_vocab
 
     def _create_lang_vocab(self, vocab_lang, lang):
         """
@@ -195,8 +202,13 @@ class EuroParlParser(object):
         Returns a tuple with two entries: a list of the vocabulary in
         language 1 and another list of the vocabulary in language 2
         """
-        return sorted(self.lang1_vocab.keys()), \
-               sorted(self.lang2_vocab.keys())
+        try:
+            return sorted(self.lang1_vocab.keys()), \
+                   sorted(self.lang2_vocab.keys())
+        except AttributeError:
+            self.get_vocab()
+            return sorted(self.lang1_vocab.keys()), \
+                   sorted(self.lang2_vocab.keys())
 
     def _strip_nonascii(self, line):
         """
@@ -241,8 +253,8 @@ class EuroParlParser(object):
         return os.path.isfile(filename)
 
 def main():
-    #lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
-    #lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
+    lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
+    lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
     euro_parser = EuroParlParser(lang1, lang2)
 
 if __name__ == '__main__':
