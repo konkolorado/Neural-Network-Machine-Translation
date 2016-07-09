@@ -13,9 +13,7 @@ Moses decoder only compatible with:
 1) Tokenize
 2) Lowercase, remove > 100 word lines, 1 sentence per line, clear non-ascii
 
-TODO:
-    - add accessors
-    - add statistical methods
+    ? add statistical methods
 """
 import os
 import sys
@@ -33,17 +31,14 @@ class EuroParlParser(object):
         self._check_lang_files_exist()
 
         if self._data_exists('cleansed'):
-            self._force_print("Cleansed data found. Loading...")
-
+            pass
         elif self._data_exists('tok'):
-            self._force_print("No cleansed data found. Cleaning...")
             self._load_tokenized_data()
-            self.clean_corpus()
+            self._clean_corpus()
         else:
-            self._force_print("No tokenized or cleansed data. Processing...")
             self._tokenize()
             self._load_tokenized_data()
-            self.clean_corpus()
+            self._clean_corpus()
 
         self._load_cleansed_data()
 
@@ -72,8 +67,9 @@ class EuroParlParser(object):
         Given a list of sentences, we tokenize using the mosesdecoder script
         to split the symbols in the sentences to be space-delimited
         """
-        self._make_dir("data/")
+        self._force_print("Tokenizing data... ")
 
+        self._make_dir("data/")
         for directory in [self.lang1_dir, self.lang2_dir]:
             new_data = self._make_filename_from_filepath(directory)
             if self._file_exists("data/" + new_data + ".tok"):
@@ -83,6 +79,8 @@ class EuroParlParser(object):
                         "{} ".format(NUM_CPUS) + "< {}".format(directory) + \
                         " > {}".format("data/" + new_data + ".tok")
             subprocess.call(command, shell=True)
+
+        self._force_print("Done\n")
 
     def _load_tokenized_data(self):
         """
@@ -111,6 +109,8 @@ class EuroParlParser(object):
         Lowercase the entire line, strip the line of non-ascii chars,
         drop empty lines, short lines, or long lines.
         """
+        self._force_print("Cleaning corpus... ")
+
         min_line_len = 0
         max_line_len = 100
         pop_indices = []
@@ -131,6 +131,7 @@ class EuroParlParser(object):
             self.lang1_tokenized.pop(i), self.lang2_tokenized.pop(i)
 
         self._save_cleansed_data()
+        self._force_print("Done\n")
 
     def _save_cleansed_data(self):
         """
@@ -156,6 +157,8 @@ class EuroParlParser(object):
         """
         Loads existing cleansed data into memory
         """
+        self._force_print("Cleansed data found. Loading... ")
+
         new_class_vars = ['lang1_cleansed', 'lang2_cleansed']
         directories = [self.lang1_dir, self.lang2_dir]
         for var, d in zip(new_class_vars, directories):
@@ -165,6 +168,7 @@ class EuroParlParser(object):
             setattr(self, var, parsed)
 
         self._assert_equal_lens(self.lang1_cleansed, self.lang2_cleansed)
+        self._force_print("Done\n")
 
     def _unpickle_data(self, filename):
         """
@@ -256,7 +260,7 @@ class EuroParlParser(object):
         """
         Force prints the item to stdout
         """
-        print item
+        sys.stdout.write(str(item))
         sys.stdout.flush()
 
     def _make_dir(self, path):
