@@ -13,8 +13,6 @@ class Decoder(object):
         lang1, lang2_1 = parser1.get_random_subset_corpus(portion)
         parser2 = EuroParlParser(lang2_2_dir, lang3_dir)
         lang2_2, lang3 = parser2.get_random_subset_corpus(portion)
-        print len(lang1), len(lang2_1), len(lang2_2), len(lang3)
-        input()
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
