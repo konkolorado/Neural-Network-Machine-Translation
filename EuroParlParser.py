@@ -221,15 +221,22 @@ class EuroParlParser(object):
         """
         return self.lang1_cleansed, self.lang2_cleansed
 
-    def get_random_subset_corpus(self, subsize):
+    def get_random_subset_corpus(self, percentage):
         """
-        Returns a subsize-subset of the corpus data as a tuple of lists
+        Returns a subset of the corpus data as a tuple of lists
+        Ideal for low-memory settings
         """
-        size = subsize * len(self.lang1_cleansed)
-        shuf_list = list(zip(self.lang1_cleansed, self.lang2_cleansed))
-        random.shuffle(shuf_list)
-        lang1_copy, lang2_copy = zip(*shuf_list)
-        return lang1_copy[:size], lang2_copy[:size]
+        size = len(self.lang1_cleansed)
+        subsize = int(percentage * len(self.lang1_cleansed))
+        sample_indices = random.sample(range(0, size), subsize)
+
+        lang1_data = [self.lang1_cleansed[i] for i in sample_indices]
+        lang2_data = [self.lang2_cleansed[i] for i in sample_indices]
+
+        del self.lang1_cleansed, self.lang2_cleansed
+        self.lang1_cleansed = lang1_data
+        self.lang2_cleansed = lang2_data
+        return lang1_data, lang2_data
 
     def make_subset_vocab(self, lang1, lang2):
         """
