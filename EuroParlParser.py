@@ -221,10 +221,11 @@ class EuroParlParser(object):
         """
         return self.lang1_cleansed, self.lang2_cleansed
 
-    def get_random_subset_corpus(self, size):
+    def get_random_subset_corpus(self, subsize):
         """
-        Returns a size-subset of the corpus data as a tuple of lists
+        Returns a subsize-subset of the corpus data as a tuple of lists
         """
+        size = subsize * len(self.lang1_cleansed)
         shuf_list = list(zip(self.lang1_cleansed, self.lang2_cleansed))
         random.shuffle(shuf_list)
         lang1_copy, lang2_copy = zip(*shuf_list)
