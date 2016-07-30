@@ -229,7 +229,6 @@ class EuroParlParser(object):
         """
         return line.decode('ascii', errors='ignore')
 
-
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
     lang2 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'

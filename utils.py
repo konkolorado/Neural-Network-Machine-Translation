@@ -61,6 +61,22 @@ def unpickle_data(filename):
     instream.close()
     return data
 
+def write_data(data, filename):
+    """
+    Writes the given data to a filename in plaint text format
+    """
+    outstream = open(filename, "w")
+    for line in data:
+        outstream.write("%s\n" % line)
+    outstream.close()
+
+def load_data(filename):
+    """
+    Given a filename, loads and returns textdata
+    """
+    instream = open(filename, 'r')
+    return [line.strip() for line in instream]
+
 def assert_equal_lens(item1, item2):
     """
     Given two container items, assert that they contain an equal
