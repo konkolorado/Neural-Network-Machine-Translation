@@ -16,11 +16,11 @@ Moses decoder only compatible with:
     ? add statistical methods
 """
 import os
-import sys
 import subprocess
 
 import random
-import cPickle as pk
+
+import utils
 
 NUM_CPUS = 4
 
@@ -30,9 +30,9 @@ class EuroParlParser(object):
         self.lang2_dir = lang2_dir
         self._check_lang_files_exist()
 
-        if self._data_exists('cleansed'):
+        if utils.data_exists('cleansed', self.lang1_dir, self.lang2_dir):
             pass
-        elif self._data_exists('tok'):
+        elif utils.data_exists('tok', self.lang1_dir, self.lang2_dir):
             self._load_tokenized_data()
             self._clean_corpus()
         else:
@@ -51,28 +51,17 @@ class EuroParlParser(object):
         assert os.path.exists(self.lang2_dir), \
             "{} file not found".format(self.lang2_dir)
 
-    def _data_exists(self, ext):
-        """
-        Determines if ext data exists. If so, return True, else False
-        """
-        tokdat1 = self._make_filename_from_filepath(self.lang1_dir)
-        tokdat2 = self._make_filename_from_filepath(self.lang2_dir)
-        if os.path.exists('data/{}.{}'.format(tokdat1, ext)) and \
-           os.path.exists('data/{}.{}'.format(tokdat2, ext)):
-            return True
-        return False
-
     def _tokenize(self):
         """
         Given a list of sentences, we tokenize using the mosesdecoder script
         to split the symbols in the sentences to be space-delimited
         """
-        self._force_print("Tokenizing data... ")
+        utils.force_print("Tokenizing data... ")
 
-        self._make_dir("data/")
+        utils.make_dir("data/")
         for directory in [self.lang1_dir, self.lang2_dir]:
-            new_data = self._make_filename_from_filepath(directory)
-            if self._file_exists("data/" + new_data + ".tok"):
+            new_data = utils.make_filename_from_filepath(directory)
+            if utils.file_exists("data/" + new_data + ".tok"):
                 continue
             command =  "/Users/urielmandujano/tools/mosesdecoder/scripts/" + \
                         "tokenizer/tokenizer.perl -q -threads " + \
@@ -80,7 +69,7 @@ class EuroParlParser(object):
                         " > {}".format("data/" + new_data + ".tok")
             subprocess.call(command, shell=True)
 
-        self._force_print("Done\n")
+        utils.force_print("Done\n")
 
     def _load_tokenized_data(self):
         """
@@ -90,11 +79,11 @@ class EuroParlParser(object):
         directories = [self.lang1_dir, self.lang2_dir]
 
         for var, d in zip(new_class_vars, directories):
-            tok_data = self._make_filename_from_filepath(d)
+            tok_data = utils.make_filename_from_filepath(d)
             parsed = self._parse_tokenized_data("data/" + tok_data + ".tok")
             setattr(self, var, parsed)
 
-        self._assert_equal_lens(self.lang1_tokenized, self.lang2_tokenized)
+        utils.assert_equal_lens(self.lang1_tokenized, self.lang2_tokenized)
 
     def _parse_tokenized_data(self, tokdata_filename):
         """
@@ -109,7 +98,7 @@ class EuroParlParser(object):
         Lowercase the entire line, strip the line of non-ascii chars,
         drop empty lines, short lines, or long lines.
         """
-        self._force_print("Cleaning corpus... ")
+        utils.force_print("Cleaning corpus... ")
 
         min_line_len = 0
         max_line_len = 100
@@ -131,53 +120,37 @@ class EuroParlParser(object):
             self.lang1_tokenized.pop(i), self.lang2_tokenized.pop(i)
 
         self._save_cleansed_data()
-        self._force_print("Done\n")
+        utils.force_print("Done\n")
 
     def _save_cleansed_data(self):
         """
         Saves newly cleansed data to data/ directory with the .cleansed
         extension name
         """
-        self._make_dir("data/")
+        utils.make_dir("data/")
         for directory, var in [[self.lang1_dir, self.lang1_tokenized],
                                [self.lang2_dir, self.lang2_tokenized]]:
-            new_data = self._make_filename_from_filepath(directory)
+            new_data = utils.make_filename_from_filepath(directory)
             datafile = "data/" + new_data + ".cleansed"
-            self._pickle_data(var, datafile)
-
-    def _pickle_data(self, data, filename):
-        """
-        Pickles the given data in the given filename
-        """
-        outstream = open(filename, 'wb')
-        pk.dump(data, outstream)
-        outstream.close()
+            utils.pickle_data(var, datafile)
 
     def _load_cleansed_data(self):
         """
         Loads existing cleansed data into memory
         """
-        self._force_print("Cleansed data found. Loading... ")
+        utils.force_print("Cleansed data found. Loading... ")
 
         new_class_vars = ['lang1_cleansed', 'lang2_cleansed']
         directories = [self.lang1_dir, self.lang2_dir]
         for var, d in zip(new_class_vars, directories):
-            clean_data = self._make_filename_from_filepath(d)
-            parsed = self._unpickle_data("data/" + clean_data + \
+            clean_data = utils.make_filename_from_filepath(d)
+            parsed = utils.unpickle_data("data/" + clean_data + \
                                                 ".cleansed")
             setattr(self, var, parsed)
 
-        self._assert_equal_lens(self.lang1_cleansed, self.lang2_cleansed)
-        self._force_print("Done\n")
+        utils.assert_equal_lens(self.lang1_cleansed, self.lang2_cleansed)
+        utils.force_print("Done\n")
 
-    def _unpickle_data(self, filename):
-        """
-        Given a filename, unpickles and returns the data at that file
-        """
-        instream = open(filename, 'rb')
-        data = pk.load(instream)
-        instream.close()
-        return data
 
     def get_vocab(self):
         """
@@ -256,40 +229,6 @@ class EuroParlParser(object):
         """
         return line.decode('ascii', errors='ignore')
 
-    def _assert_equal_lens(self, item1, item2):
-        """
-        Given two container items, assert that they contain an equal
-        number of items and are non empty
-        """
-        assert len(item1) == len(item2), "Unequal language sizes"
-        assert len(item1) and len(item2), "Got language of size 0"
-
-    def _force_print(self, item):
-        """
-        Force prints the item to stdout
-        """
-        sys.stdout.write(str(item))
-        sys.stdout.flush()
-
-    def _make_dir(self, path):
-        """
-        Determines if a given path name is a valid directory. If not, makes it
-        """
-        if not os.path.isdir(path):
-            os.makedirs(path)
-
-    def _make_filename_from_filepath(self, path):
-        """
-        Given a path to a file, this function finds the filename and returns
-        it
-        """
-        return os.path.split(path)[1]
-
-    def _file_exists(self, filename):
-        """
-        Returns true if filename exists, else False
-        """
-        return os.path.isfile(filename)
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
