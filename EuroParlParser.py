@@ -30,9 +30,11 @@ class EuroParlParser(object):
         self.lang2_dir = lang2_dir
         self._check_lang_files_exist()
 
-        if utils.data_exists('cleansed', self.lang1_dir, self.lang2_dir):
+        if utils.data_exists('data', 'cleansed', \
+                             self.lang1_dir, self.lang2_dir):
             pass
-        elif utils.data_exists('tok', self.lang1_dir, self.lang2_dir):
+        elif utils.data_exists('data', 'tok', \
+                               self.lang1_dir, self.lang2_dir):
             self._load_tokenized_data()
             self._clean_corpus()
         else:

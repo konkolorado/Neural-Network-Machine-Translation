@@ -6,14 +6,17 @@ import sys
 
 import cPickle as pk
 
-def data_exists(ext, lang1_dir, lang2_dir):
+def data_exists(folder, ext, lang1_dir, lang2_dir):
     """
     Determines if ext data exists. If so, return True, else False
+    Folder is the a str directory to search in
+    ext is the str file extension to search for
+    lang1_dir, lang2_dir are the paths to the files
     """
-    tokdat1 = make_filename_from_filepath(lang1_dir)
-    tokdat2 = make_filename_from_filepath(lang2_dir)
-    if os.path.exists('data/{}.{}'.format(tokdat1, ext)) and \
-       os.path.exists('data/{}.{}'.format(tokdat2, ext)):
+    dat1 = make_filename_from_filepath(lang1_dir)
+    dat2 = make_filename_from_filepath(lang2_dir)
+    if os.path.exists('{}/{}.{}'.format(folder, dat1, ext)) and \
+       os.path.exists('{}/{}.{}'.format(folder, dat2, ext)):
         return True
     return False
 
