@@ -87,3 +87,18 @@ def assert_equal_lens(item1, item2):
     """
     assert len(item1) == len(item2), "Unequal language sizes"
     assert len(item1) and len(item2), "Got language of size 0"
+
+def get_language_extention(filename):
+    """
+    Given a filename ending in .lang format, returns .lang
+    """
+    index = filename.rfind('.')
+    return filename[index:]
+
+def get_language_root(filename):
+    """
+    Given a filename ending in .lang format, returns everything before
+    .lang
+    """
+    index = filename.rfind('.')
+    return filename[:index]

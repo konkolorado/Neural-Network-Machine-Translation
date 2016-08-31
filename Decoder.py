@@ -6,7 +6,7 @@ MT between two pairs of languages and by pivoting.
 Requires Giza++ and KenLM, freely available software packages
 -- Installing Giza++ [MGIZA] on OSX 10.11
 install boost from website to /usr/local
-cd ~/to/project/directory/
+cd ~/to/where/moses/is/
 git clone https://github.com/moses-smt/mgiza.git
 cd mgiza/mgizapp
 cmake .
@@ -15,14 +15,19 @@ make
 make install
 **warning, Moses made for Linux environments and not guaranteed on OSX
 https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
+**note, I assume Moses is in ~/tools
 **note, Moses looks for dyld images in Desktop/tools/mosesdecoder
+**note, Commented out line 491 in
+mosesdecoder/scripts/training/train-model.perl for not being helpful
 """
 import subprocess
+import os
 
 from EuroParlParser import EuroParlParser
 import utils
 
 NGRAM = 3
+NCPUS = 4
 
 class Decoder(object):
     """
@@ -40,6 +45,8 @@ class Decoder(object):
         self._subset_data(lang1_dir, lang2_1_dir, lang2_2_dir, \
                           lang3_dir, portion)
         self._lang_models([lang2_1_dir, lang3_dir])
+        self._train_translation_system(lang1_dir, lang2_1_dir, lang2_2_dir, \
+                                       lang3_dir)
 
     def _new_subsets(self, lang1_dir, lang2_1_dir, lang2_2_dir,
                      lang3_dir, portion):
@@ -153,6 +160,44 @@ class Decoder(object):
             command = "/Users/urielmandujano/tools/mosesdecoder/bin"\
                       "/build_binary " + lm_datafile + " " + blm_datafile
             subprocess.call(command, shell=True)
+
+    def _train_translation_system(self, lang1_dir, lang2_1_dir, \
+                                  lang2_2_dir, lang3_dir):
+        """
+        Uses MGIZA to perform word alignments, extracts phrases, scores
+        phrases, creates lex tables and a Moses config file
+        """
+        utils.make_dir("working"), os.chdir("working")
+        self._train(lang1_dir, lang2_1_dir)
+        self._train(lang2_2_dir, lang3_dir)
+
+    def _train(self, first_lang_dir, second_lang_dir):
+        """
+        Carries out the training with the correct arguments
+        """
+        filename1 = utils.make_filename_from_filepath(first_lang_dir)
+        filename2 = utils.make_filename_from_filepath(second_lang_dir)
+
+        fileroot = "../data/" + utils.get_language_root(filename1)
+        file1_ext = utils.get_language_extention(filename1)[1:] + ".subset"
+        file2_ext = utils.get_language_extention(filename2)[1:] + ".subset"
+
+        lm = "$HOME/projects/nnmt/lm/" + filename2 + ".blm"
+        result = utils.get_language_extention(filename1)[1:] + \
+                 utils.get_language_extention(filename2) + ".training"
+
+        print fileroot, file1_ext, file2_ext
+        trainer = "~/tools/mosesdecoder/scripts/training/train-model.perl"
+        command = "nohup " + trainer + \
+        " -root-dir train -corpus {}".format(fileroot) + \
+        " -f {} -e {} -alignment".format(file1_ext, file2_ext) + \
+        " grow-diag-final-and -reordering msd-bidirectional-fe" + \
+        " -lm 0:3:{}".format(lm) + \
+        " -cores {}".format(NCPUS)
+        " -external-bin-dir ~/tools/mosesdecoder/tools >& {} &".format(result)
+
+        print command
+        subprocess.call(command, shell=True)
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
