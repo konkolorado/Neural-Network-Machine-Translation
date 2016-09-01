@@ -15,10 +15,10 @@ make
 make install
 **warning, Moses made for Linux environments and not guaranteed on OSX
 https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
-**note, I assume Moses is in ~/tools
-**note, Moses looks for dyld images in Desktop/tools/mosesdecoder
-**note, Commented out line 491 in
-mosesdecoder/scripts/training/train-model.perl for not being helpful
+**note, I assume Moses is in ~/tools/
+**note, Moses looks for dyld images in ~/Desktop/tools/mosesdecoder
+**note, Make sure merge_alignment.py is in mgizapp directory
+**note, must have -mgiza as a command option when training
 """
 import subprocess
 import os
@@ -186,17 +186,16 @@ class Decoder(object):
         result = utils.get_language_extention(filename1)[1:] + \
                  utils.get_language_extention(filename2) + ".training"
 
-        print fileroot, file1_ext, file2_ext
         trainer = "~/tools/mosesdecoder/scripts/training/train-model.perl"
         command = "nohup " + trainer + \
         " -root-dir train -corpus {}".format(fileroot) + \
         " -f {} -e {} -alignment".format(file1_ext, file2_ext) + \
         " grow-diag-final-and -reordering msd-bidirectional-fe" + \
-        " -lm 0:3:{}".format(lm) + \
-        " -cores {}".format(NCPUS)
-        " -external-bin-dir ~/tools/mosesdecoder/tools >& {} &".format(result)
-
-        print command
+        " -lm 0:3:{}:8".format(lm) + \
+        " -cores {}".format(NCPUS) + \
+        " -mgiza" + \
+        " -external-bin-dir ~/tools/mosesdecoder/tools/mgizapp/" + \
+        " >& {} &".format(result)
         subprocess.call(command, shell=True)
 
 def main():
