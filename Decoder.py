@@ -187,7 +187,7 @@ class Decoder(object):
                  utils.get_language_extention(filename2) + ".training"
 
         trainer = "~/tools/mosesdecoder/scripts/training/train-model.perl"
-        command = "nohup " + trainer + \
+        command = "nohup nice " + trainer + \
         " -root-dir train -corpus {}".format(fileroot) + \
         " -f {} -e {} -alignment".format(file1_ext, file2_ext) + \
         " grow-diag-final-and -reordering msd-bidirectional-fe" + \
