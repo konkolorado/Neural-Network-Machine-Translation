@@ -167,14 +167,34 @@ class Decoder(object):
         Uses MGIZA to perform word alignments, extracts phrases, scores
         phrases, creates lex tables and a Moses config file
         """
-        utils.make_dir("working"), os.chdir("working")
-        self._train(lang1_dir, lang2_1_dir)
-        self._train(lang2_2_dir, lang3_dir)
+        if self._no_previous_training(lang1_dir, lang2_1_dir):
+            self._training_comment(lang1_dir, lang2_1_dir)
+            self._train(lang1_dir, lang2_1_dir)
+        if self._no_previous_training(lang2_2_dir, lang3_dir):
+            self._training_comment(lang2_2_dir, lang3_dir)
+            self._train(lang2_2_dir, lang3_dir)
+
+    def _no_previous_training(self, lang1_dir, lang2_dir):
+        """
+        Checks if there exists a .ini file in the proper directories
+        If so, skips the training step. If not, performs the training
+        """
+        working_dir = utils.directory_name_from_root(lang1_dir)
+        utils.make_dir(working_dir)
+        if os.path.exists("{}/train/model/moses.ini".format(working_dir)):
+            return False
+        return True
 
     def _train(self, first_lang_dir, second_lang_dir):
         """
-        Carries out the training with the correct arguments
+        Carries out the training with the correct arguments. Creates
+        a suitably named working directory, extracts the information
+        for file names needed to run moses correctly, runs moses, and
+        returns one directory up
         """
+        working_dir = utils.directory_name_from_root(first_lang_dir)
+        os.chdir(working_dir)
+
         filename1 = utils.make_filename_from_filepath(first_lang_dir)
         filename2 = utils.make_filename_from_filepath(second_lang_dir)
 
@@ -197,6 +217,23 @@ class Decoder(object):
         " -external-bin-dir ~/tools/mosesdecoder/tools/mgizapp/" + \
         " >& {} &".format(result)
         subprocess.call(command, shell=True)
+        os.chdir("..")
+
+    def _training_comment(self, lang1_dir, lang2_dir):
+        """
+        Crafts a comment to alert the user that training is occurring
+        """
+        working_dir = utils.directory_name_from_root(lang1_dir)
+
+        filename1 = utils.make_filename_from_filepath(lang1_dir)
+        filename2 = utils.make_filename_from_filepath(lang2_dir)
+        root1 = utils.get_language_root(filename1)
+        root2 = utils.get_language_root(filename2)
+
+        comment = "Beginning training for {} and {}.".format(root1, root2) + \
+        "\nWill take a while. Check mgiza's status using ps\n"
+        utils.force_print(comment)
+
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
