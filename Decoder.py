@@ -307,8 +307,10 @@ class Decoder(object):
         command = "nohup nice" + \
         " ~/tools/mosesdecoder/scripts/training/mert-moses.pl" + \
         " {} {}".format(tune_data1, tune_data2) + \
-        " ~/tools/mosesdecoder/bin/moses train/model/moses.ini --mertdir" + \
-        " ~/tools/mosesdecoder/bin/ &> mert.out &"
+        " ~/tools/mosesdecoder/bin/moses train/model/moses.ini" + \
+        " --mertdir ~/tools/mosesdecoder/bin/" + \
+        ' --decoder-flags="-threads {}"'.format(NCPUS) + \
+        " &> mert.out &"
         subprocess.call(command, shell=True)
         os.chdir("..")
 
