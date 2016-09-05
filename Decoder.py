@@ -45,8 +45,12 @@ class Decoder(object):
         self._subset_data(lang1_dir, lang2_1_dir, lang2_2_dir, \
                           lang3_dir, portion)
         self._lang_models([lang2_1_dir, lang3_dir])
-        self._train_translation_system(lang1_dir, lang2_1_dir, lang2_2_dir, \
-                                       lang3_dir)
+        is_training = self._train_translation_system(lang1_dir, lang2_1_dir, \
+                                                     lang2_2_dir, lang3_dir)
+        if is_training:
+            return
+        # Tune data
+        # Evaluate Bleu scores
 
     def _new_subsets(self, lang1_dir, lang2_1_dir, lang2_2_dir,
                      lang3_dir, portion):
@@ -166,13 +170,19 @@ class Decoder(object):
         """
         Uses MGIZA to perform word alignments, extracts phrases, scores
         phrases, creates lex tables and a Moses config file
+        If no training is necessary, Decoder will automatically begin
+        tuning. If necessary, will launch training and program will exit
         """
+        training = False
         if self._no_previous_training(lang1_dir, lang2_1_dir):
             self._training_comment(lang1_dir, lang2_1_dir)
             self._train(lang1_dir, lang2_1_dir)
+            training = True
         if self._no_previous_training(lang2_2_dir, lang3_dir):
             self._training_comment(lang2_2_dir, lang3_dir)
             self._train(lang2_2_dir, lang3_dir)
+            training = True
+        return training
 
     def _no_previous_training(self, lang1_dir, lang2_dir):
         """
