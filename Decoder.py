@@ -298,9 +298,11 @@ class Decoder(object):
         os.chdir(working_dir)
 
         tune_data1 = utils.make_filename_from_filepath(first_lang_dir)
-        tune_data1 = "../data/" + tune_data1 + ".tune"
+        tune_data1 = "/Users/urielmandujano/projects/nnmt/data/" + \
+                     tune_data1 + ".tune"
         tune_data2 = utils.make_filename_from_filepath(second_lang_dir)
-        tune_data2 = "../data/" + tune_data2 + ".tune"
+        tune_data2 = "/Users/urielmandujano/projects/nnmt/data/" + \
+                     tune_data2 + ".tune"
 
         command = "nohup nice" + \
         " ~/tools/mosesdecoder/scripts/training/mert-moses.pl" + \
