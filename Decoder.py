@@ -50,6 +50,7 @@ class Decoder(object):
         if is_training:
             return
 
+        # TODO check if previous tuning data exists to skip tuning
         is_tuning = self._tune_system(lang1_dir, lang2_1_dir, \
                                       lang2_2_dir, lang3_dir, portion)
         if is_tuning:
@@ -252,10 +253,11 @@ class Decoder(object):
     def _tune_system(self, lang1_dir, lang2_1_dir, \
                      lang2_2_dir, lang3_dir, portion):
         """
-        Creates a tuning set from the total data. Note, this is not
+        Creates a tuning dataset from the total data. Note, this is not
         a true tuning set. True tuning sets should be entirely seperate
         from training data. However, due to lack of computing resources,
-        I use a random subset of the total data as an acceptable substitute
+        I use a random subset of the total data as an acceptable substitute.
+        Then, performs tuning using mosesdecoder
         """
         self._tuning_data_exists(lang1_dir, lang2_1_dir, portion)
         self._tuning_data_exists(lang2_2_dir, lang3_dir, portion)
@@ -287,6 +289,11 @@ class Decoder(object):
             utils.write_data(data, datafile)
 
     def _tune_set(self, first_lang_dir, second_lang_dir):
+        """
+        Initiates the tuning routine. This will take a while. Changes
+        working directory into the appropriate directory, executes the
+        command and returns to the project's base directory.
+        """
         working_dir = utils.directory_name_from_root(first_lang_dir)
         os.chdir(working_dir)
 
