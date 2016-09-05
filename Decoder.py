@@ -49,7 +49,12 @@ class Decoder(object):
                                                      lang2_2_dir, lang3_dir)
         if is_training:
             return
-        # Tune data
+
+        is_tuning = self._tune_system(lang1_dir, lang2_1_dir, \
+                                      lang2_2_dir, lang3_dir, portion)
+        if is_tuning:
+            return
+
         # Evaluate Bleu scores
 
     def _new_subsets(self, lang1_dir, lang2_1_dir, lang2_2_dir,
@@ -244,6 +249,59 @@ class Decoder(object):
         "\nWill take a while. Check mgiza's status using ps\n"
         utils.force_print(comment)
 
+    def _tune_system(self, lang1_dir, lang2_1_dir, \
+                     lang2_2_dir, lang3_dir, portion):
+        """
+        Creates a tuning set from the total data. Note, this is not
+        a true tuning set. True tuning sets should be entirely seperate
+        from training data. However, due to lack of computing resources,
+        I use a random subset of the total data as an acceptable substitute
+        """
+        self._tuning_data_exists(lang1_dir, lang2_1_dir, portion)
+        self._tuning_data_exists(lang2_2_dir, lang3_dir, portion)
+        self._tune_set(lang1_dir, lang2_1_dir)
+        self._tune_set(lang2_2_dir, lang3_dir)
+
+    def _tuning_data_exists(self, first_lang_dir, second_lang_dir, portion):
+        if utils.data_exists('data', 'tune', first_lang_dir, second_lang_dir):
+            return
+        else:
+            self._make_new_tune_set(first_lang_dir, second_lang_dir, portion)
+
+    def _make_new_tune_set(self, first_lang_dir, second_lang_dir, portion):
+        utils.force_print("Making new tuning subset\n")
+        parser = EuroParlParser(first_lang_dir, second_lang_dir)
+        first_lang, second_lang = parser.get_random_subset_corpus(portion*.1)
+        self._save_tuning_set(first_lang_dir, first_lang, second_lang_dir, \
+                              second_lang)
+
+    def _save_tuning_set(self, first_lang_dir, first_lang, second_lang_dir, \
+                         second_lang):
+        """
+        Saves the data for the tuning set as a .tune file extension
+        """
+        for dire, data in [[first_lang_dir, first_lang],
+                           [second_lang_dir, second_lang]]:
+            new_data = utils.make_filename_from_filepath(dire)
+            datafile = "data/" + new_data + ".tune"
+            utils.write_data(data, datafile)
+
+    def _tune_set(self, first_lang_dir, second_lang_dir):
+        working_dir = utils.directory_name_from_root(first_lang_dir)
+        os.chdir(working_dir)
+
+        tune_data1 = utils.make_filename_from_filepath(first_lang_dir)
+        tune_data1 = "../data/" + tune_data1 + ".tune"
+        tune_data2 = utils.make_filename_from_filepath(second_lang_dir)
+        tune_data2 = "../data/" + tune_data2 + ".tune"
+
+        command = "nohup nice" + \
+        " ~/tools/mosesdecoder/scripts/training/mert-moses.pl" + \
+        " {} {}".format(tune_data1, tune_data2) + \
+        " ~/tools/mosesdecoder/bin/moses train/model/moses.ini --mertdir" + \
+        " ~/tools/mosesdecoder/bin/ &> mert.out &"
+        subprocess.call(command, shell=True)
+        os.chdir("..")
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
