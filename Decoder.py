@@ -50,7 +50,6 @@ class Decoder(object):
         if is_training:
             return
 
-        # TODO check if previous tuning data exists to skip tuning
         is_tuning = self._tune_system(lang1_dir, lang2_1_dir, \
                                       lang2_2_dir, lang3_dir, portion)
         if is_tuning:
@@ -259,13 +258,17 @@ class Decoder(object):
         I use a random subset of the total data as an acceptable substitute.
         Then, performs tuning using mosesdecoder
         """
+        tuning = False
         if not self._already_tuned(lang1_dir):
             self._tuning_data_exists(lang1_dir, lang2_1_dir, portion)
             self._tune_set(lang1_dir, lang2_1_dir)
+            tuning = True
 
         if not self._already_tuned(lang2_2_dir):
             self._tuning_data_exists(lang2_2_dir, lang3_dir, portion)
             self._tune_set(lang2_2_dir, lang3_dir)
+            tuning = True
+        return tuning
 
     def _already_tuned(self, first_lang_dir):
         """
@@ -340,7 +343,7 @@ class Decoder(object):
         # each leg
         # Use output of first translation as input for the second leg
         # and evaluate bleu scores on that
-        
+
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
     lang2_1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
