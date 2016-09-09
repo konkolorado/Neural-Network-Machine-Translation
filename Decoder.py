@@ -259,10 +259,22 @@ class Decoder(object):
         I use a random subset of the total data as an acceptable substitute.
         Then, performs tuning using mosesdecoder
         """
-        self._tuning_data_exists(lang1_dir, lang2_1_dir, portion)
-        self._tuning_data_exists(lang2_2_dir, lang3_dir, portion)
-        self._tune_set(lang1_dir, lang2_1_dir)
-        self._tune_set(lang2_2_dir, lang3_dir)
+        if not self._already_tuned(lang1_dir):
+            self._tuning_data_exists(lang1_dir, lang2_1_dir, portion)
+            self._tune_set(lang1_dir, lang2_1_dir)
+
+        if not self._already_tuned(lang2_2_dir):
+            self._tuning_data_exists(lang2_2_dir, lang3_dir, portion)
+            self._tune_set(lang2_2_dir, lang3_dir)
+
+    def _already_tuned(self, first_lang_dir):
+        """
+        Checks for a moses.ini file in the proper location and reports
+        True if found. This way, you don't have to re-tune the system
+        """
+        working_dir = utils.directory_name_from_root(first_lang_dir)
+        filename = working_dir + "/mert-work/moses.ini"
+        return os.path.exists(filename)
 
     def _tuning_data_exists(self, first_lang_dir, second_lang_dir, portion):
         if utils.data_exists('data', 'tune', first_lang_dir, second_lang_dir):
@@ -314,6 +326,21 @@ class Decoder(object):
         subprocess.call(command, shell=True)
         os.chdir("..")
 
+    def _test(self):
+        """
+        Tests the resultant translation systems on some held out data
+        To do so, it first checks if the moses.ini file exists in the
+        proper location
+        """
+        # Create / check for existing test data
+        # Possibly binarize the phrase table
+        # Filter on the given test set
+        # Translate the test data, output to a file
+        # Get bleu scores for the file, treat this as a baseline for
+        # each leg
+        # Use output of first translation as input for the second leg
+        # and evaluate bleu scores on that
+        
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
     lang2_1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.en'
