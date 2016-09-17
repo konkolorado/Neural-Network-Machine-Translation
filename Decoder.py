@@ -55,7 +55,7 @@ class Decoder(object):
         if is_tuning:
             return
 
-        # Evaluate Bleu scores
+        self._test(lang1_dir, lang2_1_dir, lang2_2_dir, lang3_dir, portion)
 
     def _new_subsets(self, lang1_dir, lang2_1_dir, lang2_2_dir,
                      lang3_dir, portion):
@@ -329,20 +329,90 @@ class Decoder(object):
         subprocess.call(command, shell=True)
         os.chdir("..")
 
-    def _test(self):
+    def _test(self, lang1_dir, lang2_1_dir, \
+              lang2_2_dir, lang3_dir, portion):
         """
         Tests the resultant translation systems on some held out data
-        To do so, it first checks if the moses.ini file exists in the
-        proper location
+        To do so, it first ensures testing data exists
         """
-        # Create / check for existing test data
-        # Possibly binarize the phrase table
+        self._test_data_exists(lang1_dir, lang2_1_dir, portion)
+        self._test_data_exists(lang2_2_dir, lang3_dir, portion)
+
+        self._binarized_phrase_table_exists(lang1_dir)
+        self._binarized_phrase_table_exists(lang2_2_dir)
+
+        # Update the old moses.ini to point to the correct phrase table
         # Filter on the given test set
         # Translate the test data, output to a file
         # Get bleu scores for the file, treat this as a baseline for
         # each leg
         # Use output of first translation as input for the second leg
         # and evaluate bleu scores on that
+
+    def _test_data_exists(self, first_lang_dir, second_lang_dir, portion):
+        if utils.data_exists('data', 'test', first_lang_dir, second_lang_dir):
+            return
+        else:
+            self._make_new_test_set(first_lang_dir, second_lang_dir, portion)
+
+    def _make_new_test_set(self, first_lang_dir, second_lang_dir, portion):
+        """
+        Makes new test set at 10% of total training data used. Here the
+        system takes a random sample, in an ideal scenario this subset
+        would be disjoint from the test/tune set. But my low-computational
+        power scenario is real
+        """
+        utils.force_print("Making new testing subset\n")
+        parser = EuroParlParser(first_lang_dir, second_lang_dir)
+        first_lang, second_lang = parser.get_random_subset_corpus(portion*.1)
+        self._save_testing_set(first_lang_dir, first_lang, second_lang_dir, \
+                              second_lang)
+
+    def _save_testing_set(self, first_lang_dir, first_lang, second_lang_dir, \
+                          second_lang):
+        """
+        Saves newly created testing data in data directory using the
+        .test extension
+        """
+        for dire, data in [[first_lang_dir, first_lang],
+                           [second_lang_dir, second_lang]]:
+            new_data = utils.make_filename_from_filepath(dire)
+            datafile = "data/" + new_data + ".test"
+            utils.write_data(data, datafile)
+
+    def _binarized_phrase_table_exists(self, first_lang_dir):
+        """
+        Binarize the phrase table for faster loading during the testing
+        process
+        """
+        working_dir = utils.directory_name_from_root(first_lang_dir)
+        utils.make_dir(working_dir + "/binarized-model/")
+
+        if not os.path.exists(working_dir + "/binarized-model/phrase_table"):
+            utils.force_print("Making phrase-table\n")
+            self._binarize_phrase_table(working_dir)
+
+        if not os.path.exists(working_dir + \
+                              "/binarized-model/reordering-table"):
+            utils.force_print("Making reordering-table\n")
+            self._binarize_reordering_table(working_dir)
+
+    def _binarize_phrase_table(self, working_dir):
+        os.chdir(working_dir)
+        command = "~/tools/mosesdecoder/bin/processPhraseTableMin" + \
+        " -in train/model/phrase-table.gz -nscores 4 " + \
+        " -out binarized-model/phrase-table"
+        subprocess.call(command, shell=True)
+        os.chdir("..")
+
+    def _binarize_reordering_table(self, working_dir):
+        os.chdir(working_dir)
+        command =  "~/tools/mosesdecoder/bin/processLexicalTableMin " + \
+                   " -in train/model/reordering-table.wbe-msd-" + \
+                   "bidirectional-fe.gz" + \
+                   " -out binarized-model/reordering-table"
+        subprocess.call(command, shell=True)
+        os.chdir("..")
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
