@@ -341,7 +341,9 @@ class Decoder(object):
         self._binarized_phrase_table_exists(lang1_dir)
         self._binarized_phrase_table_exists(lang2_2_dir)
 
-        # Update the old moses.ini to point to the correct phrase table
+        self._update_config_file(lang1_dir)
+        self._update_config_file(lang2_2_dir)
+
         # Filter on the given test set
         # Translate the test data, output to a file
         # Get bleu scores for the file, treat this as a baseline for
@@ -388,12 +390,13 @@ class Decoder(object):
         working_dir = utils.directory_name_from_root(first_lang_dir)
         utils.make_dir(working_dir + "/binarized-model/")
 
-        if not os.path.exists(working_dir + "/binarized-model/phrase_table"):
+        if not os.path.exists(working_dir + \
+                              "/binarized-model/phrase-table.minphr"):
             utils.force_print("Making phrase-table\n")
             self._binarize_phrase_table(working_dir)
 
         if not os.path.exists(working_dir + \
-                              "/binarized-model/reordering-table"):
+                              "/binarized-model/reordering-table.minlexr"):
             utils.force_print("Making reordering-table\n")
             self._binarize_reordering_table(working_dir)
 
@@ -413,6 +416,39 @@ class Decoder(object):
                    " -out binarized-model/reordering-table"
         subprocess.call(command, shell=True)
         os.chdir("..")
+
+    def _update_config_file(self, lang_dir):
+        """
+        After creating the binarized phrase table, the old moses.ini
+        config file created during tuning must be updated to point
+        to the new binarized phrase table. This does that using sed
+        """
+        working_dir = utils.directory_name_from_root(lang_dir)
+        config = working_dir + "/mert-work/moses.ini"
+
+        command1 = "sed -i.bak " + \
+                   "s/PhraseDictionaryMemory/PhraseDictionaryCompact/" + \
+                   " {}/mert-work/moses.ini".format(working_dir)
+        subprocess.call(command1, shell=True)
+
+        command2 = "sed -i.bak " + \
+                   "'s/PhraseDictionaryCompact\(.*\){}.*input-factor\(.*\)"\
+                                                    .format(working_dir) + \
+                   "/PhraseDictionaryCompact\\1{}\/binarized-model\/"\
+                                                    .format(working_dir) + \
+                "phrase-table.minphr input-factor\\2/' {}/mert-work/moses.ini"\
+                                                    .format(working_dir)
+        subprocess.call(command2, shell=True)
+
+        command3 = "sed -i.bak " + \
+                   "'s/LexicalReordering \(.*\){}.*".format(working_dir) + \
+                   "/LexicalReordering \\1{}\/binarized-model\/"\
+                                                    .format(working_dir) + \
+                   "reordering-table/' {}/mert-work/moses.ini"\
+                                                    .format(working_dir)
+        subprocess.call(command3, shell=True)
+
+
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
