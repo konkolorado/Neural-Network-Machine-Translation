@@ -13,12 +13,25 @@ cmake .
 In CMakeList.txt line 39, delete -lrt
 make
 make install
+
+-- Installing CMPH library for efficient table loading
+install cmph from http://sourceforge.net/projects/cmph/
+cd /path/tp/cmph/
+./configure; make; make install
+
+-- Installing moses
+Install
+cd /path/to/moses/
+./bjam --with-cmph=/Users/urielmandujano/tools/cmph-2.0 --with-boost=/usr/local/boost_1_61_0/ -j4 toolset=clang --with-xmlrpc-c=/usr/local
+
 **warning, Moses made for Linux environments and not guaranteed on OSX
 https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
 **note, I assume Moses is in ~/tools/
 **note, Moses looks for dyld images in ~/Desktop/tools/mosesdecoder
 **note, Make sure merge_alignment.py is in mgizapp directory
 **note, must have -mgiza as a command option when training
+**note, if after training and tuning you want to toy with your system's
+translations, use the command ~/tools/mosesdecoder/bin/moses -minlexr-memory -f fr-en.working/mert-work/moses.ini
 """
 import subprocess
 import os
@@ -338,18 +351,27 @@ class Decoder(object):
         self._test_data_exists(lang1_dir, lang2_1_dir, portion)
         self._test_data_exists(lang2_2_dir, lang3_dir, portion)
 
+        # Binarize step and update config file handled in filter step
+        """
         self._binarized_phrase_table_exists(lang1_dir)
         self._binarized_phrase_table_exists(lang2_2_dir)
 
         self._update_config_file(lang1_dir)
         self._update_config_file(lang2_2_dir)
+        """
 
-        # Filter on the given test set
+        # Filter on the given test set and makes corresponding binary
+        # phrase tables / reordering tables
+        self._filter_test_set_source(lang1_dir)
+
         # Translate the test data, output to a file
-        # Get bleu scores for the file, treat this as a baseline for
-        # each leg
+        self._perform_first_pivot_translation(lang1_dir)
+
+        # Opt1: Get bleu scores for each leg of pivot
+        # TODO
         # Use output of first translation as input for the second leg
-        # and evaluate bleu scores on that
+        # Filter and binarize the phrase + reordering-table for 2nd leg
+        # Evaluate bleu scores on that
 
     def _test_data_exists(self, first_lang_dir, second_lang_dir, portion):
         if utils.data_exists('data', 'test', first_lang_dir, second_lang_dir):
@@ -404,7 +426,7 @@ class Decoder(object):
         os.chdir(working_dir)
         command = "~/tools/mosesdecoder/bin/processPhraseTableMin" + \
         " -in train/model/phrase-table.gz -nscores 4 " + \
-        " -out binarized-model/phrase-table"
+        " -out binarized-model/phrase-table -threads {}".format(NCPUS)
         subprocess.call(command, shell=True)
         os.chdir("..")
 
@@ -413,7 +435,8 @@ class Decoder(object):
         command =  "~/tools/mosesdecoder/bin/processLexicalTableMin " + \
                    " -in train/model/reordering-table.wbe-msd-" + \
                    "bidirectional-fe.gz" + \
-                   " -out binarized-model/reordering-table"
+                   " -out binarized-model/reordering-table" + \
+                   " -threads {}".format(NCPUS)
         subprocess.call(command, shell=True)
         os.chdir("..")
 
@@ -448,7 +471,53 @@ class Decoder(object):
                                                     .format(working_dir)
         subprocess.call(command3, shell=True)
 
+    def _filter_test_set_source(self, first_lang_dir):
+        """
+        Speeds up translation by minimizing the phrase tables to be relevant
+        to the given test set. Can be tested by running command
+        ~/tools/mosesdecoder/bin/moses -f \
+        /Users/urielmandujano/projects/nnmt/es-en.working/binarized-filtered-model/moses.ini \
+        -i /Users/urielmandujano/projects/nnmt/es-en.working/binarized-filtered-model/input.34049 \
+        -minlexr-memory
+        """
+        working_dir = utils.directory_name_from_root(first_lang_dir)
+        os.chdir(working_dir)
 
+        filtered_dat = "binarized-filtered-model/"
+        test_dat = "../data/" + \
+                   utils.make_filename_from_filepath(first_lang_dir) + \
+                   ".test"
+
+        command = "/Users/urielmandujano/tools/mosesdecoder/scripts/" + \
+                  "training/filter-model-given-input.pl" + \
+                  " {} mert-work/moses.ini".format(filtered_dat) + \
+                  " {}".format(test_dat) + \
+                  " -Binarizer /Users/urielmandujano/tools/mosesdecoder" + \
+                  "/bin/processPhraseTableMin"
+        subprocess.call(command, shell=True)
+        os.chdir("..")
+
+    def _perform_first_pivot_translation(self, first_lang_dir):
+        """
+        Translates from the origin language to pivot language. Outputs
+        to a file
+        """
+        working_dir = utils.directory_name_from_root(first_lang_dir)
+        result = "../data/" + \
+                 utils.make_filename_from_filepath(first_lang_dir) + \
+                 ".translated"
+        debug = utils.make_filename_from_filepath(first_lang_dir) + \
+                ".translated"
+        os.chdir(working_dir)
+
+        com ="nohup nice /Users/urielmandujano/tools/mosesdecoder/bin/moses"+\
+        " -f binarized-filtered-model/moses.ini < " + \
+        "binarized-filtered-model/input.34049" + \
+        " > {}".format(result) + \
+        " 2> binarized-filtered-model/{}.out".format(debug) + \
+        " -minlexr-memory &"
+        subprocess.call(com, shell=True)
+        os.chdir("..")
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
