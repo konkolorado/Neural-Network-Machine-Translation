@@ -351,7 +351,6 @@ class Decoder(object):
         self._test_data_exists(lang1_dir, lang2_1_dir, portion)
         self._test_data_exists(lang2_2_dir, lang3_dir, portion)
 
-        # Binarize step and update config file handled in filter step
         """
         self._binarized_phrase_table_exists(lang1_dir)
         self._binarized_phrase_table_exists(lang2_2_dir)
@@ -359,14 +358,17 @@ class Decoder(object):
         self._update_config_file(lang1_dir)
         self._update_config_file(lang2_2_dir)
         """
-        # Filter and binarize the phrase + reordering-table for 2nd leg
+
+        # Filter and binarize the phrase + reordering-table for 1st leg
         test_src = "../data/" + \
                    utils.make_filename_from_filepath(lang1_dir) + \
                    ".test"
         self._filter_test_set(lang1_dir, test_src)
 
         # Translate for first leg
-        self._perform_pivot_translation(lang1_dir)
+        if self._no_translation(lang1_dir):
+            self._perform_pivot_translation(lang1_dir)
+
 
         # Filter and binarize the phrase + reordering-table for 2nd leg
         test_tar = "../data/" + \
@@ -375,14 +377,14 @@ class Decoder(object):
         self._filter_test_set(lang2_2_dir, test_tar)
 
         # Translate for second leg
-        self._perform_pivot_translation(lang2_2_dir)
+        if self._no_translation(lang2_2_dir):
+            self._perform_pivot_translation(lang2_2_dir)
 
         # TODO
-        # rerun firt piv traslation, develop method to skip this if appropriate
-        # files already exist
+        # rerun firt piv traslation
         # Fix so that test set for es-en matches test set for en-fr
-        # Evaluate bleu scores on final translation
         # Opt1: Get bleu scores for each leg of pivot
+        self._get_bleu_scores(lang2_2_dir, lang3_dir)
 
     def _test_data_exists(self, first_lang_dir, second_lang_dir, portion):
         if utils.data_exists('data', 'test', first_lang_dir, second_lang_dir):
@@ -504,6 +506,15 @@ class Decoder(object):
         subprocess.call(command, shell=True)
         os.chdir("..")
 
+    def _no_translation(self, lang_dir):
+        """
+        Determines if the translation has already been performed
+        given a language directory
+        """
+        trans = "data/" + utils.make_filename_from_filepath(lang_dir) + \
+                ".translated"
+        return not utils.file_exists(trans)
+
     def _perform_pivot_translation(self, lang_dir):
         """
         Translates from the origin language to pivot language. Outputs
@@ -527,6 +538,19 @@ class Decoder(object):
         subprocess.call(com, shell=True)
         os.chdir("..")
 
+    def _get_bleu_scores(self, first_lang_dir, second_lang_dir):
+        """
+        Runs the moses script to eval bleu scores on a completed translation
+        """
+        true = "data/" + utils.make_filename_from_filepath(second_lang_dir) + \
+               ".test"
+        translated = "data/" + \
+                     utils.make_filename_from_filepath(first_lang_dir) + \
+                     ".translated"
+        command = "/Users/urielmandujano/tools/mosesdecoder/scripts/" + \
+                  "generic/multi-bleu.perl -lc {}".format(true) + \
+                  " < {}".format(translated)
+        subprocess.call(command, shell=True)
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'
