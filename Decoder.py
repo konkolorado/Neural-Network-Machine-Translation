@@ -359,19 +359,30 @@ class Decoder(object):
         self._update_config_file(lang1_dir)
         self._update_config_file(lang2_2_dir)
         """
-
-        # Filter on the given test set and makes corresponding binary
-        # phrase tables / reordering tables
-        self._filter_test_set_source(lang1_dir)
-
-        # Translate the test data, output to a file
-        self._perform_first_pivot_translation(lang1_dir)
-
-        # Opt1: Get bleu scores for each leg of pivot
-        # TODO
-        # Use output of first translation as input for the second leg
         # Filter and binarize the phrase + reordering-table for 2nd leg
-        # Evaluate bleu scores on that
+        test_src = "../data/" + \
+                   utils.make_filename_from_filepath(lang1_dir) + \
+                   ".test"
+        self._filter_test_set(lang1_dir, test_src)
+
+        # Translate for first leg
+        self._perform_pivot_translation(lang1_dir)
+
+        # Filter and binarize the phrase + reordering-table for 2nd leg
+        test_tar = "../data/" + \
+                   utils.make_filename_from_filepath(lang1_dir) + \
+                   ".translated"
+        self._filter_test_set(lang2_2_dir, test_tar)
+
+        # Translate for second leg
+        self._perform_pivot_translation(lang2_2_dir)
+
+        # TODO
+        # rerun firt piv traslation, develop method to skip this if appropriate
+        # files already exist
+        # Fix so that test set for es-en matches test set for en-fr
+        # Evaluate bleu scores on final translation
+        # Opt1: Get bleu scores for each leg of pivot
 
     def _test_data_exists(self, first_lang_dir, second_lang_dir, portion):
         if utils.data_exists('data', 'test', first_lang_dir, second_lang_dir):
@@ -471,7 +482,7 @@ class Decoder(object):
                                                     .format(working_dir)
         subprocess.call(command3, shell=True)
 
-    def _filter_test_set_source(self, first_lang_dir):
+    def _filter_test_set(self, lang_dir, test_dat):
         """
         Speeds up translation by minimizing the phrase tables to be relevant
         to the given test set. Can be tested by running command
@@ -480,14 +491,10 @@ class Decoder(object):
         -i /Users/urielmandujano/projects/nnmt/es-en.working/binarized-filtered-model/input.34049 \
         -minlexr-memory
         """
-        working_dir = utils.directory_name_from_root(first_lang_dir)
+        working_dir = utils.directory_name_from_root(lang_dir)
         os.chdir(working_dir)
 
         filtered_dat = "binarized-filtered-model/"
-        test_dat = "../data/" + \
-                   utils.make_filename_from_filepath(first_lang_dir) + \
-                   ".test"
-
         command = "/Users/urielmandujano/tools/mosesdecoder/scripts/" + \
                   "training/filter-model-given-input.pl" + \
                   " {} mert-work/moses.ini".format(filtered_dat) + \
@@ -497,27 +504,29 @@ class Decoder(object):
         subprocess.call(command, shell=True)
         os.chdir("..")
 
-    def _perform_first_pivot_translation(self, first_lang_dir):
+    def _perform_pivot_translation(self, lang_dir):
         """
         Translates from the origin language to pivot language. Outputs
         to a file
         """
-        working_dir = utils.directory_name_from_root(first_lang_dir)
+        working_dir = utils.directory_name_from_root(lang_dir)
         result = "../data/" + \
-                 utils.make_filename_from_filepath(first_lang_dir) + \
+                 utils.make_filename_from_filepath(lang_dir) + \
                  ".translated"
-        debug = utils.make_filename_from_filepath(first_lang_dir) + \
+        debug = utils.make_filename_from_filepath(lang_dir) + \
                 ".translated"
         os.chdir(working_dir)
 
+        in_name = utils.get_full_filename("binarized-filtered-model", "input")
         com ="nohup nice /Users/urielmandujano/tools/mosesdecoder/bin/moses"+\
-        " -f binarized-filtered-model/moses.ini < " + \
-        "binarized-filtered-model/input.34049" + \
+        " -f binarized-filtered-model/moses.ini <" + \
+        " binarized-filtered-model/{}".format(in_name) + \
         " > {}".format(result) + \
         " 2> binarized-filtered-model/{}.out".format(debug) + \
         " -minlexr-memory &"
         subprocess.call(com, shell=True)
         os.chdir("..")
+
 
 def main():
     lang1 = '/Users/urielmandujano/data/europarl/europarl-v7.es-en.es'

@@ -110,3 +110,14 @@ def directory_name_from_root(file_dir):
     name_index = get_language_root(file_dir).rfind('.') + 1
     name = get_language_root(file_dir)[name_index:] + ".working"
     return name
+
+def get_full_filename(directory, pattern):
+    """
+    Given a pattern to search for, will return a matching filename
+    in the provided directory
+    """
+    all_files = os.listdir(directory)
+    for f in all_files:
+        if pattern in f:
+            return f
+    return ''
