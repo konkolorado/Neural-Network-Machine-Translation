@@ -55,3 +55,8 @@ SMT is an inherently lengthy process. To make things easier for me (and hopefull
 2. As a simplifying assumption, I assume the datafile names are of the form something.something.something. For ease of use, best to stick to file name convention I use in the example main()
 3. Make sure merge_alignment.py is in mgizapp directory
 4. In one of my test runs, the language model could not be built with the given data, giving an Abort Trap: 6 error. Clearing the directory and rerunning fixed the problem. Other issues arise if you aren't using enough data. ~1000 examples should be enough
+
+## TODOs
+1. Provide a more user friendly way to provide system the number of CPUs available
+2. Allow the user to provide their own directory for mosesdecoder
+3. Output bleu scores for individual legs of the translations
