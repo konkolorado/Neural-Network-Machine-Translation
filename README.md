@@ -7,7 +7,7 @@ Unsupervised translation between language pairs only works if there is a lot of 
 
 2) Develop a baseline bleu score for performing pivoting using Neural Networks
 
-Getting Started
+##Getting Started
 To begin, you'll need to install moses decoder, a freely available MT system, from
 https://github.com/moses-smt/mosesdecoder/tree/RELEASE-2.1.1
 Simply download the zip file, unzip it wherever you prefer your moses installation to be. Then, you'll need to install the cmph library to binarize tables later from
