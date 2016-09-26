@@ -38,6 +38,9 @@ After tuning, once more to test and output results.
 **note, must have -mgiza as a command option when training
 **note, if after training and tuning you want to toy with your system's
 translations, use the command ~/tools/mosesdecoder/bin/moses -minlexr-memory -f fr-en.working/mert-work/moses.ini
+**note, In one of my test runs, the language model could not be built
+with the given data, giving an Abort Trap: 6 error. Clearing the directory
+and rerunning fixed the problem
 """
 import subprocess
 import os
@@ -329,6 +332,7 @@ class Decoder(object):
         working directory into the appropriate directory, executes the
         command and returns to the project's base directory.
         """
+        self._tuning_comment(first_lang_dir, second_lang_dir)
         working_dir = utils.directory_name_from_root(first_lang_dir)
         os.chdir(working_dir)
 
@@ -346,6 +350,22 @@ class Decoder(object):
         " &> mert.out &"
         subprocess.call(command, shell=True)
         os.chdir("..")
+
+    def _tuning_comment(self, lang1_dir, lang2_dir):
+        """
+        Crafts a comment to alert the user that tuning is occurring
+        """
+        working_dir = utils.directory_name_from_root(lang1_dir)
+
+        filename1 = utils.make_filename_from_filepath(lang1_dir)
+        filename2 = utils.make_filename_from_filepath(lang2_dir)
+        root1 = utils.get_language_root(filename1)
+        root2 = utils.get_language_root(filename2)
+
+        comment = "Beginning tuning for {} and {}.".format(root1, root2) + \
+        "\nWill take a while. Check status using ps.\nRerun" + \
+        " python Decoder.py when complete.\n"
+        utils.force_print(comment)
 
     def _test(self, lang1_dir, lang2_1_dir, \
               lang2_2_dir, lang3_dir, portion):
@@ -386,8 +406,6 @@ class Decoder(object):
             self._perform_pivot_translation(lang2_2_dir)
 
         # TODO
-        # rerun firt piv traslation
-        # Fix so that test set for es-en matches test set for en-fr
         # Opt1: Get bleu scores for each leg of pivot
         self._get_bleu_scores(lang2_2_dir, lang3_dir)
 
