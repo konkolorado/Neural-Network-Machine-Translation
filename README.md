@@ -18,7 +18,7 @@ http://sourceforge.net/projects/cmph/
 
 and compile by
 
-cd /path/to/cmph/
+cd /path/to/cmph/  
 ./configure; make; make install
 
 Next you'll need to install Giza++ to perform word alignments. You need the boost libraries to compile so let's get those first. Go to
@@ -29,15 +29,15 @@ install boost from website to /usr/local/
 
 Now we can install Giza++ (mgiza)
 
-cd /path/to/mosesdecoder/...
-git clone https://github.com/moses-smt/mgiza.git...
-cd mgiza/mgizapp...
-cmake . ...
-In CMakeList.txt line 39, delete -lrt...
-make...
+cd /path/to/mosesdecoder/  
+git clone   https://github.com/moses-smt/mgiza.git  
+cd mgiza/mgizapp  
+cmake .  
+In CMakeList.txt line 39, delete -lrt  
+make  
 make install
 
 Now we compile moses with the correct flags and cmph/boost lib versions
 
-cd /path/to/mosesdecoder/...
+cd /path/to/mosesdecoder/  
 ./bjam --with-cmph=/Users/urielmandujano/tools/cmph-2.0 --with-boost=/usr/local/boost_1_61_0/ -j4 toolset=clang --with-xmlrpc-c=/usr/local
