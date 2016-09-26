@@ -43,7 +43,7 @@ cd /path/to/mosesdecoder/
 ./bjam --with-cmph=/Users/urielmandujano/tools/cmph-2.0 --with-boost=/usr/local/boost_1_61_0/ -j4 toolset=clang --with-xmlrpc-c=/usr/local
 
 ## Warning
-Moses is made for Linux environments and not guaranteed on OSX
+Moses is made for Linux environments and not guaranteed on OSX  
 https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
 
 ## Running the Moses Translation pivoting
