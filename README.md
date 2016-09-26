@@ -41,3 +41,17 @@ Now we compile moses with the correct flags and cmph/boost lib versions
 
 cd /path/to/mosesdecoder/  
 ./bjam --with-cmph=/Users/urielmandujano/tools/cmph-2.0 --with-boost=/usr/local/boost_1_61_0/ -j4 toolset=clang --with-xmlrpc-c=/usr/local
+
+## Warning
+Moses is made for Linux environments and not guaranteed on OSX
+https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
+
+## Running the Moses Translation pivoting
+SMT is an inherently lengthy process. To make things easier for me (and hopefully you), it runs in 3 stages. The first time you type python Decoder.py, it will preprocess the data and begin training in the background. Wait until training ends (type ps to see if moses is still working). Once training is complete, run python Decoder.py again to begin tuning, this will take the longest amount of time (again, type ps to check if mert is still working. Expect a long wait time) Finally, once tuning completes, type python Decoder.py again to create the test set, binarize models, and output translations and bleu scores.
+
+###### Notes
+1. If after training and tuning you want to toy with your system's translations, use the command  
+..* ~/tools/mosesdecoder/bin/moses -minlexr-memory -f fr-en.working/mert-work/moses.ini
+2. As a simplifying assumption, I assume the datafile names are of the form something.something.something. For ease of use, best to stick to file name convention I use in the example main()
+3. Make sure merge_alignment.py is in mgizapp directory
+4. In one of my test runs, the language model could not be built with the given data, giving an Abort Trap: 6 error. Clearing the directory and rerunning fixed the problem. Other issues arise if you aren't using enough data. ~1000 examples should be enough
