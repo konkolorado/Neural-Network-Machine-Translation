@@ -26,6 +26,12 @@ cd /path/to/moses/
 
 **warning, Moses made for Linux environments and not guaranteed on OSX
 https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
+**note, as a simplifying assumption, I assume the datafile names are of the
+form something.something.something For ease of use, best to stick to file
+name convention I use in the example main()
+**note, you need to run python Decoder 3 times. 1st to clean data files and
+begin training. Once training completes, run it again to begin tuning.
+After tuning, once more to test and output results.
 **note, I assume Moses is in ~/tools/
 **note, Moses looks for dyld images in ~/Desktop/tools/mosesdecoder
 **note, Make sure merge_alignment.py is in mgizapp directory
@@ -230,7 +236,7 @@ class Decoder(object):
         file1_ext = utils.get_language_extention(filename1)[1:] + ".subset"
         file2_ext = utils.get_language_extention(filename2)[1:] + ".subset"
 
-        lm = "$HOME/projects/nnmt/lm/" + filename2 + ".blm"
+        lm = "$PWD/../lm/" + filename2 + ".blm"
         result = utils.get_language_extention(filename1)[1:] + \
                  utils.get_language_extention(filename2) + ".training"
 
@@ -259,7 +265,8 @@ class Decoder(object):
         root2 = utils.get_language_root(filename2)
 
         comment = "Beginning training for {} and {}.".format(root1, root2) + \
-        "\nWill take a while. Check mgiza's status using ps\n"
+        "\nWill take a while. Check mgiza's status using ps.\nRerun" + \
+        " python Decoder.py when complete.\n"
         utils.force_print(comment)
 
     def _tune_system(self, lang1_dir, lang2_1_dir, \
@@ -326,11 +333,9 @@ class Decoder(object):
         os.chdir(working_dir)
 
         tune_data1 = utils.make_filename_from_filepath(first_lang_dir)
-        tune_data1 = "/Users/urielmandujano/projects/nnmt/data/" + \
-                     tune_data1 + ".tune"
+        tune_data1 = "$PWD/../data/" + tune_data1 + ".tune"
         tune_data2 = utils.make_filename_from_filepath(second_lang_dir)
-        tune_data2 = "/Users/urielmandujano/projects/nnmt/data/" + \
-                     tune_data2 + ".tune"
+        tune_data2 = "$PWD/../data/" + tune_data2 + ".tune"
 
         command = "nohup nice" + \
         " ~/tools/mosesdecoder/scripts/training/mert-moses.pl" + \
@@ -348,8 +353,8 @@ class Decoder(object):
         Tests the resultant translation systems on some held out data
         To do so, it first ensures testing data exists
         """
-        self._test_data_exists(lang1_dir, lang2_1_dir, portion)
-        self._test_data_exists(lang2_2_dir, lang3_dir, portion)
+        self._test_data_exists(lang1_dir, lang2_1_dir, \
+                               lang2_2_dir, lang3_dir, portion)
 
         """
         self._binarized_phrase_table_exists(lang1_dir)
@@ -386,13 +391,19 @@ class Decoder(object):
         # Opt1: Get bleu scores for each leg of pivot
         self._get_bleu_scores(lang2_2_dir, lang3_dir)
 
-    def _test_data_exists(self, first_lang_dir, second_lang_dir, portion):
-        if utils.data_exists('data', 'test', first_lang_dir, second_lang_dir):
+    def _test_data_exists(self, first_lang_dir, second_lang_dir, \
+                          third_lang_dir, fourth_lang_dir, portion):
+        if utils.data_exists('data', 'test', first_lang_dir, \
+                             second_lang_dir) and \
+           utils.data_exists('data', 'test', third_lang_dir, \
+                             fourth_lang_dir):
             return
         else:
-            self._make_new_test_set(first_lang_dir, second_lang_dir, portion)
+            self._make_new_test_set(first_lang_dir, second_lang_dir, \
+                                    third_lang_dir, fourth_lang_dir, portion)
 
-    def _make_new_test_set(self, first_lang_dir, second_lang_dir, portion):
+    def _make_new_test_set(self, first_lang_dir, second_lang_dir, \
+                           third_lang_dir, fourth_lang_dir, portion):
         """
         Makes new test set at 10% of total training data used. Here the
         system takes a random sample, in an ideal scenario this subset
@@ -401,9 +412,17 @@ class Decoder(object):
         """
         utils.force_print("Making new testing subset\n")
         parser = EuroParlParser(first_lang_dir, second_lang_dir)
-        first_lang, second_lang = parser.get_random_subset_corpus(portion*.1)
+        first_lang, second_lang = parser.make_test_data([], portion * .1)
+        sample_indices = parser.sample_indices
+
+        parser2 = EuroParlParser(third_lang_dir, fourth_lang_dir)
+        third_lang, fourth_lang = parser2.make_test_data(sample_indices, \
+                                                        portion*.1)
+
         self._save_testing_set(first_lang_dir, first_lang, second_lang_dir, \
-                              second_lang)
+                               second_lang)
+        self._save_testing_set(third_lang_dir, third_lang, fourth_lang_dir, \
+                               fourth_lang)
 
     def _save_testing_set(self, first_lang_dir, first_lang, second_lang_dir, \
                           second_lang):
@@ -489,8 +508,8 @@ class Decoder(object):
         Speeds up translation by minimizing the phrase tables to be relevant
         to the given test set. Can be tested by running command
         ~/tools/mosesdecoder/bin/moses -f \
-        /Users/urielmandujano/projects/nnmt/es-en.working/binarized-filtered-model/moses.ini \
-        -i /Users/urielmandujano/projects/nnmt/es-en.working/binarized-filtered-model/input.34049 \
+        /path/to/project/es-en.working/binarized-filtered-model/moses.ini \
+        -i /path/to/project/es-en.working/binarized-filtered-model/input.### \
         -minlexr-memory
         """
         working_dir = utils.directory_name_from_root(lang_dir)
@@ -534,7 +553,7 @@ class Decoder(object):
         " binarized-filtered-model/{}".format(in_name) + \
         " > {}".format(result) + \
         " 2> binarized-filtered-model/{}.out".format(debug) + \
-        " -minlexr-memory &"
+        " -minlexr-memory"
         subprocess.call(com, shell=True)
         os.chdir("..")
 

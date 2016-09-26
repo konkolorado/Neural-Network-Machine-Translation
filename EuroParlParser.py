@@ -211,7 +211,20 @@ class EuroParlParser(object):
         del self.lang1_cleansed, self.lang2_cleansed
         self.lang1_cleansed = lang1_data
         self.lang2_cleansed = lang2_data
+        self.sample_indices = sample_indices
         return lang1_data, lang2_data
+
+    def make_test_data(self, test_indices, percentage):
+        """
+        Creates a test set. If test_indices is a list of indices,
+        simply returns the corresponding data. Else, chooses new indicatates
+        """
+        if len(test_indices) == 0:
+            return self.get_random_subset_corpus(percentage)
+        else:
+            lang1_data = [self.lang1_cleansed[i] for i in test_indices]
+            lang2_data = [self.lang2_cleansed[i] for i in test_indices]
+            return lang1_data, lang2_data
 
     def make_subset_vocab(self, lang1, lang2):
         """
