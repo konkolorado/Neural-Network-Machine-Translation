@@ -19,28 +19,15 @@ install cmph from http://sourceforge.net/projects/cmph/
 cd /path/tp/cmph/
 ./configure; make; make install
 
--- Installing moses
+-- Compiling moses
 Install
 cd /path/to/moses/
 ./bjam --with-cmph=/Users/urielmandujano/tools/cmph-2.0 --with-boost=/usr/local/boost_1_61_0/ -j4 toolset=clang --with-xmlrpc-c=/usr/local
 
-**warning, Moses made for Linux environments and not guaranteed on OSX
-https://www.mail-archive.com/moses-support@mit.edu/msg14530.html
-**note, as a simplifying assumption, I assume the datafile names are of the
-form something.something.something For ease of use, best to stick to file
-name convention I use in the example main()
-**note, you need to run python Decoder 3 times. 1st to clean data files and
-begin training. Once training completes, run it again to begin tuning.
-After tuning, once more to test and output results.
 **note, I assume Moses is in ~/tools/
 **note, Moses looks for dyld images in ~/Desktop/tools/mosesdecoder
-**note, Make sure merge_alignment.py is in mgizapp directory
 **note, must have -mgiza as a command option when training
-**note, if after training and tuning you want to toy with your system's
-translations, use the command ~/tools/mosesdecoder/bin/moses -minlexr-memory -f fr-en.working/mert-work/moses.ini
-**note, In one of my test runs, the language model could not be built
-with the given data, giving an Abort Trap: 6 error. Clearing the directory
-and rerunning fixed the problem
+
 """
 import subprocess
 import os
