@@ -10,16 +10,25 @@ Unsupervised translation between language pairs only works if there is a lot of 
 ##Getting Started
 To begin, you'll need to install moses decoder, a freely available MT system, from
 
-(https://github.com/moses-smt/mosesdecoder/tree/RELEASE-2.1.1)
+https://github.com/moses-smt/mosesdecoder/tree/RELEASE-2.1.1
+
 Simply download the zip file, unzip it wherever you prefer your moses installation to be. Then, you'll need to install the cmph library to binarize tables later from
+
 http://sourceforge.net/projects/cmph/
+
 and compile by
+
 cd /path/to/cmph/
 ./configure; make; make install
+
 Next you'll need to install Giza++ to perform word alignments. You need the boost libraries to compile so let's get those first. Go to
+
 http://www.boost.org/
+
 install boost from website to /usr/local/
+
 Now we can install Giza++ (mgiza)
+
 cd /path/to/mosesdecoder/
 git clone https://github.com/moses-smt/mgiza.git
 cd mgiza/mgizapp
@@ -27,12 +36,8 @@ cmake .
 In CMakeList.txt line 39, delete -lrt
 make
 make install
+
 Now we compile moses with the correct flags and cmph/boost lib versions
-cd /path/to/moses/
+
+cd /path/to/mosesdecoder/
 ./bjam --with-cmph=/Users/urielmandujano/tools/cmph-2.0 --with-boost=/usr/local/boost_1_61_0/ -j4 toolset=clang --with-xmlrpc-c=/usr/local
-
-
-
-
-compile moses by
-cd /path/to/mosesdecoder/bin
