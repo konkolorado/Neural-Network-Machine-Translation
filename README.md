@@ -18,7 +18,7 @@ http://sourceforge.net/projects/cmph/
 
 and compile by
 
-cd /path/to/cmph/...
+cd /path/to/cmph/
 ./configure; make; make install
 
 Next you'll need to install Giza++ to perform word alignments. You need the boost libraries to compile so let's get those first. Go to
