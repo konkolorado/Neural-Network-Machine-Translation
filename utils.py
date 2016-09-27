@@ -73,6 +73,15 @@ def write_data(data, filename):
         outstream.write("%s\n" % line)
     outstream.close()
 
+def add_data(data, filename):
+    """
+    Adds the given data to a filename
+    """
+    outstream = open(filename, "a")
+    for line in data:
+        outstream.write("%s\n" % line)
+    outstream.close()
+
 def load_data(filename):
     """
     Given a filename, loads and returns textdata

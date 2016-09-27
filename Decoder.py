@@ -31,6 +31,7 @@ cd /path/to/moses/
 """
 import subprocess
 import os
+import sys
 
 from EuroParlParser import EuroParlParser
 import utils
@@ -416,18 +417,127 @@ class Decoder(object):
         power scenario is real
         """
         utils.force_print("Making new testing subset\n")
-        parser = EuroParlParser(first_lang_dir, second_lang_dir)
-        first_lang, second_lang = parser.make_test_data([], portion * .1)
-        sample_indices = parser.sample_indices
+        self._match(first_lang_dir, second_lang_dir, third_lang_dir, \
+                    fourth_lang_dir)
 
-        parser2 = EuroParlParser(third_lang_dir, fourth_lang_dir)
-        third_lang, fourth_lang = parser2.make_test_data(sample_indices, \
-                                                        portion*.1)
+
+
+        #self._match(parser1, parser2)
+
+        #first_lang, second_lang = parser.make_test_data([], portion * .1)
+        #sample_indices = parser.sample_indices
+        #third_lang, fourth_lang = parser2.make_test_data(sample_indices, \
+        #                                                portion*.1)
+        #print first_lang[:5]
+        #print second_lang[:5]
+        #print third_lang[:5]
+        #print fourth_lang[:5]
+        while True:
+            continue
 
         self._save_testing_set(first_lang_dir, first_lang, second_lang_dir, \
                                second_lang)
         self._save_testing_set(third_lang_dir, third_lang, fourth_lang_dir, \
                                fourth_lang)
+
+
+    def _mangage_matching(self, size, first_lang_dir, second_lang_dir, \
+                           third_lang_dir, fourth_lang_dir):
+        """
+        Performs the matching routine to make sure the same sentences are
+        represented in both test sets
+        """
+        utils.force_print("Matching datasets\n")
+
+        for i in range(1, int(1 / size)+1 ):
+            parser1 = EuroParlParser(first_lang_dir, second_lang_dir)
+            self._reduce_data(parser1, i, size)
+            parser2 = EuroParlParser(third_lang_dir, fourth_lang_dir)
+            self._reduce_data(parser2, i, size)
+            shared_indices = self._get_matching(parser1, parser2)
+            self._save_matches(parser1, parser2, shared_indices)
+            del parser1
+            del parser2
+
+    def _save_matches(self, p1, p2, shared):
+        """
+        Writes the matched indices to a filename ending in .matched
+        """
+        p1_lang1, p1_lang2 = [], []
+        p2_lang1, p2_lang2 = [], []
+        for (p1_i, p2_i) in shared:
+            p1_lang1.append(p1.lang1_cleansed[p1_i])
+            p1_lang2.append(p1.lang2_cleansed[p1_i])
+            p2_lang1.append(p2.lang1_cleansed[p2_i])
+            p2_lang2.append(p2.lang2_cleansed[p2_i])
+
+        for directory, data in [[p1.lang1_dir, p1_lang1],
+                                [p1.lang2_dir, p1_lang2],
+                                [p2.lang1_dir, p2_lang1],
+                                [p2.lang2_dir, p2_lang2]]:
+            new_name = utils.make_filename_from_filepath(directory)
+            new_name = "data/" + new_name + ".matched"
+            if os.path.exists(new_name):
+                utils.add_data(data, new_name)
+            else:
+                utils.write_data(data, new_name)
+            del data
+
+    def _get_matching(self, p1, p2):
+        """
+        Actually modifies the parser data so that the only data
+        available is the one shared by both parsers
+        """
+        p1_lang2_dict = {}
+        for i, sentence in enumerate(p1.lang2_cleansed):
+            p1_lang2_dict[sentence] = i
+
+        shared = []
+        for i, sentence in enumerate(p2.lang1_cleansed):
+            if sentence in p1_lang2_dict:
+                shared.append((p1_lang2_dict[sentence], i))
+        return shared
+
+    def _reduce_data(self, parser, section, percentage):
+        """
+        This matching problem takes too much memory to do all at once.
+        Here, I cut the data down into smaller chunks (percentage).
+        The parameter section indicates which section of the data
+        to work on i.e. 1st 25%, 2nd 35%... and adjusts the parsers
+        data accordingly
+        """
+        size = len(parser.lang1_cleansed)
+        bottom_limit = int(size * percentage * (section - 1))
+        uppper_limit = int(bottom_limit + size * percentage)
+
+        lang1_cleansed = parser.lang1_cleansed[bottom_limit:uppper_limit][:]
+        del parser.lang1_cleansed
+        lang2_cleansed = parser.lang2_cleansed[bottom_limit:uppper_limit][:]
+        del parser.lang2_cleansed
+
+        parser.lang1_cleansed = lang1_cleansed
+        parser.lang2_cleansed = lang2_cleansed
+
+    def _match(self, p1_l1_dir, p1_l2_dir, p2_l1_dir, p2_l2_dir):
+        """
+        Takes 2 parser objects as params. Makes sure that the two objects
+        share the same cleansed data (Examples seen in es-en are
+        present in en-fr in a 1-to-1 relationship)
+        """
+        if self._matched_files_exist([p1_l1_dir, p1_l2_dir, \
+                                      p2_l1_dir, p2_l2_dir]):
+            print "loading matched files"
+            #self._load_matched_data()
+        else:
+            self._mangage_matching(.5, p1_l1_dir, p1_l2_dir, \
+                                   p2_l1_dir, p2_l2_dir)
+
+    def _matched_files_exist(self, dirs):
+        """
+        Checks if data files ending in '.matched extension exist'
+        """
+        return utils.data_exists('data', 'matched', dirs[0], dirs[1]) and \
+           utils.data_exists('data', 'matched', dirs[2], dirs[3])
 
     def _save_testing_set(self, first_lang_dir, first_lang, second_lang_dir, \
                           second_lang):
