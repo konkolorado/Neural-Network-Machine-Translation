@@ -177,6 +177,17 @@ class EuroParlParser(object):
             for word in sentence:
                 vocab_lang[word] = 1 + vocab_lang.get(word, 0)
 
+    def _load_matched_data(self):
+        new_class_vars = ['lang1_cleansed', 'lang2_cleansed']
+        directories = [self.lang1_dir, self.lang2_dir]
+        for var, d in zip(new_class_vars, directories):
+            clean_data = utils.make_filename_from_filepath(d)
+            instream = open("data/" + clean_data + ".matched", "r")
+            parsed = []
+            for line in instream:
+                parsed.append(line.strip())
+            setattr(self, var, parsed)
+
     def vocab_to_list(self):
         """
         Returns a tuple with two entries: a list of the vocabulary in
@@ -219,15 +230,12 @@ class EuroParlParser(object):
         Creates a test set. If test_indices is a list of indices,
         simply returns the corresponding data. Else, chooses new indices
         """
+        self._load_matched_data()
         if len(test_indices) == 0:
             return self.get_random_subset_corpus(percentage)
         else:
-            print self.lang1_cleansed[:3]
-            print self.lang2_cleansed[:3]
             lang1_data = [self.lang1_cleansed[i] for i in test_indices]
             lang2_data = [self.lang2_cleansed[i] for i in test_indices]
-            print len(self.lang1_cleansed), len(self.lang2_cleansed)
-            print len(lang1_data), len(lang2_data)
             return lang1_data, lang2_data
 
     def make_subset_vocab(self, lang1, lang2):
