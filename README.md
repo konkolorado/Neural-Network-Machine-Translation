@@ -4,6 +4,9 @@ MT using Neural Networks between low-data languages. Continuation of work done i
 Unsupervised translation between language pairs only works if there is a lot of data (documents saying the same thing, in 2 different languages). However, not all language pairs have a lot of data to perform high quality translations. The idea in my project is to use a popular language to link language pairs without a lot of data. For example, perhaps Spanish and French don't have much data, but there is a lot of Spanish- English and English-French data. This project attempts to pivot a translation through the 2 language pairs (Spanish->English->French). The goals in this project are as follows:
 
 1) Develop baseline bleu scores for the pivot translation using standard MT tools
+Baseline for translating Spanish->English->French:
+BLEU = 28.67, 58.7/34.5/22.8/15.4 (BP=0.988, ratio=0.989, hyp_len=526110, ref_len=532206)
+
 
 2) Develop a baseline bleu score for performing pivoting using Neural Networks
 
