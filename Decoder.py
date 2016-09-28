@@ -381,8 +381,7 @@ class Decoder(object):
         # Translate for first leg
         if self._no_translation(lang1_dir):
             self._perform_pivot_translation(lang1_dir)
-
-
+            
         # Filter and binarize the phrase + reordering-table for 2nd leg
         test_tar = "../data/" + \
                    utils.make_filename_from_filepath(lang1_dir) + \
@@ -420,26 +419,18 @@ class Decoder(object):
         self._match(first_lang_dir, second_lang_dir, third_lang_dir, \
                     fourth_lang_dir)
 
+        parser1 = EuroParlParser(first_lang_dir, second_lang_dir)
+        first_lang, second_lang = parser1.make_test_data([], portion * .1)
+        sample_indices = parser1.sample_indices
 
-
-        #self._match(parser1, parser2)
-
-        #first_lang, second_lang = parser.make_test_data([], portion * .1)
-        #sample_indices = parser.sample_indices
-        #third_lang, fourth_lang = parser2.make_test_data(sample_indices, \
-        #                                                portion*.1)
-        #print first_lang[:5]
-        #print second_lang[:5]
-        #print third_lang[:5]
-        #print fourth_lang[:5]
-        while True:
-            continue
+        parser2 = EuroParlParser(third_lang_dir, fourth_lang_dir)
+        third_lang, fourth_lang = parser2.make_test_data(sample_indices, \
+                                                         portion * .1)
 
         self._save_testing_set(first_lang_dir, first_lang, second_lang_dir, \
                                second_lang)
         self._save_testing_set(third_lang_dir, third_lang, fourth_lang_dir, \
                                fourth_lang)
-
 
     def _mangage_matching(self, size, first_lang_dir, second_lang_dir, \
                            third_lang_dir, fourth_lang_dir):
@@ -526,8 +517,7 @@ class Decoder(object):
         """
         if self._matched_files_exist([p1_l1_dir, p1_l2_dir, \
                                       p2_l1_dir, p2_l2_dir]):
-            print "loading matched files"
-            #self._load_matched_data()
+            pass
         else:
             self._mangage_matching(.5, p1_l1_dir, p1_l2_dir, \
                                    p2_l1_dir, p2_l2_dir)
