@@ -1,0 +1,21 @@
+- Handle non-ascii code characters
+    - Done
+- Provide single leg translations and scorings
+    - Done
+- Use generators to fix prohibitive sized translation costs
+    - Taken care of since reading a file line by line is
+    basically a generator. We never load the full file
+    into memory for processing.
+- Make it easier to specify path to moses
+    - Done
+- Make resistant to injection
+    - Done
+    - Everywhere I take input from the use, escape
+    the text using pipes.quote
+- Figure out how to input special characters in interactive
+    mode for translation
+    - Might have to go into moses server options
+    - Done
+- Check if moses provides an easy way to do a reverse
+    language translation (to avoid training a seperate model)
+    - Done; No
