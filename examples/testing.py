@@ -42,7 +42,7 @@ def evaluate_pivoting():
     # Create Test instance, set verbose to True to see whats happening
     test = Test(True)
 
-    # We can finally evalute the translations the pivoting provides by
+    # We can finally evaluate the translations the pivoting provides by
     # calling test_pivoting_quality and providing the source language test file,
     # the directory containing the trained translation model for the source to
     # pivot languages, the target language (true) test file and the directory
@@ -53,11 +53,21 @@ def evaluate_pivoting():
     test.test_pivoting_quality("data/test/europarl-v7.es-en.es.tok.cleansed.test.matched",
         "es-en.working", "data/test/europarl-v7.fr-en.fr.tok.cleansed.test.matched", "en-fr.working")
 
+def translate_file():
+    # Create Test instance, set verbose to True to see whats happening
+    test = Test(True)
+
+    # Call the translate_file function to handle the translation. The resulting
+    # file will be the exact location and name as the src_file with the added
+    # '.translated' extension.  The procedure will also output where the
+    # translation is being placed
+    test.translate_file("data/test/europarl-v7.es-en.es.tok.cleansed.test", "es-en.working")
+
 def main():
     interactive_mode()
     evaluate_translations()
     evaluate_pivoting()
-
+    translate_file()
 
 if __name__ == '__main__':
     main()

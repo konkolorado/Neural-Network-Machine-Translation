@@ -149,7 +149,7 @@ class Test(object):
         """
         Given two files containing src and target data, returns the bleu score
         """
-        self._print("Translating langs in {}.\n\tSaving to {}... ".format(working_dir, result))
+        self._print("Translating between langs in {}.\n\tSaving to {}... ".format(working_dir, result))
         command ="nohup nice " + \
             path_to_moses_decoder + "bin/moses"+\
             " -f {}/moses.ini <".format(filt_dir) + \
@@ -177,7 +177,7 @@ class Test(object):
         """
         assert utilities.file_exists(result_file), "Error {} not found".format(result_file)
         print("Results for {} translation".format(working_dir))
-        print(open(result_file, 'r').readline().strip())
+        print("\t", open(result_file, 'r').readline().strip(), "\n")
 
     def test_pivoting_interactive(self, working_dir1, working_dir2):
         """
@@ -262,3 +262,29 @@ class Test(object):
             self._get_bleu_score(target_result, tar_test, tar_working_dir, result_file)
 
         self._report_bleu_score("pivot", result_file)
+
+    def translate_file(self, src_test, working_dir):
+        """
+        Translates a file from one language into another.  This relies on having a
+        properly trained and tuned system for the target languages available in the
+        working_dir.
+        As parameters, this expects the src_file to translate and the working_dir
+        containing the trained translation system
+        """
+        self._validate_file(src_test)
+        assert utilities.dir_exists(working_dir), "TestTranslationQualityError: {} not found".format(working_dir)
+
+        if not utilities.isabsolute(src_test):
+            src_test = os.getcwd() + "/" + src_test
+
+        # Filter test set
+        filt_dir = working_dir + "/binarized-filtered-model"
+        if not utilities.dir_exists(filt_dir):
+            self._filter_test_set(src_test, working_dir, filt_dir, "binarizer.out")
+
+        # Create translated file
+        result = src_test + ".translated"
+        if not utilities.file_exists(result):
+            self._translate_pivot(src_test, working_dir, result, filt_dir, "translation.out")
+        else:
+            print("Saved {} translation result to {}".format(src_test, result))
