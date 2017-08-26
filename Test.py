@@ -32,73 +32,6 @@ class Test(object):
                 src_file + "\n")
             sys.exit()
 
-    def test_translator_interactive(self, working_dir):
-        """
-        Launches the mosesdecoder to allow for interactive decoding between
-        source and target languages.
-        """
-        assert utilities.dir_exists(working_dir), "TestInteractiveError: {} not found".format(working_dir)
-
-        temp_file = working_dir + "/interactive.out"
-        port = self._get_free_port()
-        proxy = self._setup_proxy(port)
-
-        process = self._load_server(working_dir, port, temp_file)
-        self._manage_connections(process, proxy)
-        self._shut_server(process)
-
-    def _load_server(self, working_dir, port, logfile):
-        """
-        Loads the moses server on the provided port number using the
-        informatio in the specified working directory. Returns the
-        launched server process
-        """
-        self._print("Loading interactive translator at {}...".format(working_dir))
-        command = path_to_moses_decoder + "bin/moses" + \
-            " -minlexr-memory --server --server-port {}".format(port) + \
-            " --server-maxconn-backlog 5" + \
-            " -v 0 -f {}/mert-work/moses.ini &".format(working_dir)
-
-        with open(logfile, 'w') as err:
-            process = subprocess.Popen(command.split(), shell=False, stderr=err)
-        self._print("Ready\n")
-        return process
-
-    def _make_translation_request(self, proxy, text):
-        """ Sends the text we want to translate to the moses server """
-        response = proxy.translate({"text": text})
-        return response["text"]
-
-    def _get_free_port(self):
-        """ Returns an available port number for moses server to use """
-        sock = socket.socket()
-        sock.bind(('', 0))
-        return sock.getsockname()[1]
-
-    def _setup_proxy(self, port):
-        """ Sets up a server proxy to communicate with moses server """
-        return xmlrpc.client.ServerProxy("http://localhost:{}/RPC2".format(port))
-
-    def _shut_server(self, process):
-        """ Uses the putil library to shut the background translation
-        service down """
-        psutil.Process(process.pid).kill()
-
-    def _manage_connections(self, process, proxy):
-        """ Accepts user input, submits it to moses, returns the result """
-        print("Enter text to translate (type quit to exit)")
-        while True:
-            query = input(">> ").lower().strip()
-            if query == "quit" or query == "q":
-                return
-
-            try:
-                result = self._make_translation_request(proxy, query)
-            except (ConnectionRefusedError, xmlrpc.client.Fault) as e:
-                result = ''
-
-            print("Text: {}\tTranslation: {}\n".format(query, result))
-
     def test_translation_quality(self, src_test, tar_test, working_dir):
         """
         Given two files containing source data and target data, outputs
@@ -178,47 +111,6 @@ class Test(object):
         assert utilities.file_exists(result_file), "Error {} not found".format(result_file)
         print("Results for {} translation".format(working_dir))
         print("\t", open(result_file, 'r').readline().strip(), "\n")
-
-    def test_pivoting_interactive(self, working_dir1, working_dir2):
-        """
-        Launches the mosesdecoder to allow for interactive pivoting decoding
-        from the source language into the pivot language and on to the
-        target language
-        """
-        assert utilities.dir_exists(working_dir1), "TestInteractiveError: {} not found".format(working_dir1)
-        assert utilities.dir_exists(working_dir2), "TestInteractiveError: {} not found".format(working_dir2)
-
-        temp_file1 = working_dir1 + "/interactive.out"
-        temp_file2 = working_dir2 + "/interactive.out"
-
-        port1, port2 = self._get_free_port(), self._get_free_port()
-        prox1, prox2 = self._setup_proxy(port1), self._setup_proxy(port2)
-
-        process1 = self._load_server(working_dir1, port1, temp_file1)
-        process2  =self._load_server(working_dir2, port2, temp_file2)
-
-        self._manage_pivoting_connections(prox1, prox2)
-
-        self._shut_server(process1)
-        self._shut_server(process2)
-
-    def _manage_pivoting_connections(self, prox1, prox2):
-        """
-        Accepts user input, submits it to moses for the pivoting
-        translation and displays the result to the user
-        """
-        print("Enter text to translate (type quit to exit)")
-        while True:
-            query = input(">> ").lower().strip()
-            if query == "quit" or query == "q":
-                return
-            try:
-                piv_result = self._make_translation_request(prox1, query)
-                tar_result = self._make_translation_request(prox2, piv_result)
-            except (ConnectionRefusedError, xmlrpc.client.Fault) as e:
-                tar_result = ''
-
-            print("Text: {}\tTranslation: {}\n".format(query, tar_result))
 
     def test_pivoting_quality(self, src_test, src_working_dir, tar_test, tar_working_dir):
         """
