@@ -9,13 +9,11 @@ import subprocess
 
 import utilities
 
-config = utilities.config_file_reader()
-path_to_moses_decoder = utilities.safe_string(config.get("Environment Settings", "path_to_moses_decoder"))
-NCPUS = config.getint("Environment Settings", "ncpus")
-
 class Tune(object):
 
-    def __init__(self, verbose=False):
+    def __init__(self, path_to_moses, NCPUS, verbose=False):
+        self.path_to_moses = path_to_moses
+        self.NCPUS = NCPUS
         self.verbose = verbose
 
     def _print(self, item):
@@ -49,11 +47,26 @@ class Tune(object):
         self._print("Tuning model at {}. This may take a while... ".format(working_dir))
         command = "cd {};".format(working_dir) + \
             "nohup nice " + \
-            path_to_moses_decoder + "scripts/training/mert-moses.pl" + \
+            self.path_to_moses + "scripts/training/mert-moses.pl" + \
             " {} {} ".format(src_tune, tar_tune) + \
-            path_to_moses_decoder + "bin/moses train/model/moses.ini" + \
-            " --mertdir " + path_to_moses_decoder + "bin/" + \
-            ' --decoder-flags="-threads {}"'.format(NCPUS) + \
+            self.path_to_moses + "bin/moses train/model/moses.ini" + \
+            " --mertdir " + self.path_to_moses + "bin/" + \
+            ' --decoder-flags="-threads {}"'.format(self.NCPUS) + \
             " &> mert.out; cd .."
         subprocess.call(command, shell=True)
         self._print("Done\n")
+
+
+def main():
+    config = utilities.config_file_reader()
+    NCPUS = config.getint("Environment Settings", "ncpus")
+    path_to_moses = utilities.safe_string(config.get("Environment Settings", "path_to_moses_decoder"))
+
+    tuner = Tune(path_to_moses, NCPUS)
+    tuner.tune("data/tune/europarl-v7.es-en.es.tok.cleansed.tune",
+        "data/tune/europarl-v7.es-en.en.tok.cleansed.tune", "es-en.working")
+    tuner.tune("data/tune/europarl-v7.fr-en.en.tok.cleansed.tune",
+        "data/tune/europarl-v7.fr-en.fr.tok.cleansed.tune", "en-fr.working")
+
+if __name__ == '__main__':
+    main()

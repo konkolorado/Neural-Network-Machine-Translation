@@ -6,19 +6,14 @@ Source code for testing the translation system
 import os
 import sys
 import subprocess
-import socket
-import xmlrpc.client
-from multiprocessing import Process
 
 import psutil
 
 import utilities
 
-config = utilities.config_file_reader()
-path_to_moses_decoder = utilities.safe_string(config.get("Environment Settings", "path_to_moses_decoder"))
-
 class Test(object):
-    def __init__(self, verbose = False):
+    def __init__(self, path_to_moses, verbose = False):
+        self.path_to_moses = path_to_moses
         self.verbose = verbose
 
     def _print(self, item):
@@ -69,11 +64,11 @@ class Test(object):
         translation much faster
         """
         self._print("Filtering test set at {}... ".format(working_dir))
-        command = path_to_moses_decoder + "scripts/" + \
+        command = self.path_to_moses + "scripts/" + \
             "training/filter-model-given-input.pl" + \
             " {} {}/mert-work/moses.ini".format(filt_dir, working_dir) + \
             " {}".format(src_test) + \
-            " -Binarizer " + path_to_moses_decoder + "bin/processPhraseTableMin" + \
+            " -Binarizer " + self.path_to_moses + "bin/processPhraseTableMin" + \
             " &> {}/{}".format(working_dir, debug)
         subprocess.call(command, shell=True)
         self._print("Done\n")
@@ -84,7 +79,7 @@ class Test(object):
         """
         self._print("Translating between langs in {}.\n\tSaving to {}... ".format(working_dir, result))
         command ="nohup nice " + \
-            path_to_moses_decoder + "bin/moses"+\
+            self.path_to_moses + "bin/moses"+\
             " -f {}/moses.ini <".format(filt_dir) + \
             " {}".format(src_test) + \
             " > {}".format(result) + \
@@ -98,7 +93,7 @@ class Test(object):
         Runs the moses script to eval bleu scores on a completed translation
         """
         self._print("Obtaining bleu scores for {}... ".format(src_translated))
-        command = path_to_moses_decoder + "scripts/" + \
+        command = self.path_to_moses + "scripts/" + \
                   "generic/multi-bleu.perl -lc {}".format(tar_test) + \
                   " < {} > {}".format(src_translated, result_file)
         subprocess.call(command, shell=True)
@@ -180,3 +175,18 @@ class Test(object):
             self._translate_pivot(src_test, working_dir, result, filt_dir, "translation.out")
         else:
             print("Saved {} translation result to {}".format(src_test, result))
+
+def main():
+    config = utilities.config_file_reader()
+    path_to_moses = utilities.safe_string(config.get("Environment Settings", "path_to_moses_decoder"))
+
+    test = Test(path_to_moses)
+    test.test_translation_quality("data/test/europarl-v7.es-en.es.tok.cleansed.test",
+        "data/test/europarl-v7.es-en.en.tok.cleansed.test", "es-en.working")
+    test.test_translation_quality("data/test/europarl-v7.fr-en.en.tok.cleansed.test",
+        "data/test/europarl-v7.fr-en.fr.tok.cleansed.test", "en-fr.working")
+    test.test_pivoting_quality("data/test/europarl-v7.es-en.es.tok.cleansed.test.matched",
+        "es-en.working", "data/test/europarl-v7.fr-en.fr.tok.cleansed.test.matched", "en-fr.working")
+
+if __name__ == '__main__':
+    main()

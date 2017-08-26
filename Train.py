@@ -9,13 +9,11 @@ import subprocess
 
 import utilities
 
-config = utilities.config_file_reader()
-path_to_moses_decoder = utilities.safe_string(config.get("Environment Settings", "path_to_moses_decoder"))
-NGRAM = config.getint("Environment Settings", "ngram")
-NCPUS = config.getint("Environment Settings", "ncpus")
-
 class Train(object):
-    def __init__(self, verbose=False):
+    def __init__(self, path_to_moses, NCPUS, NGRAM, verbose=False):
+        self.path_to_moses = path_to_moses
+        self.NCPUS = NCPUS
+        self.NGRAM = NGRAM
         self.lmdir = "lm/"
         utilities.make_dir(self.lmdir)
         self.verbose = verbose
@@ -45,8 +43,8 @@ class Train(object):
             return
 
         self._print("Building and binarizing language models... ")
-        command = path_to_moses_decoder + "bin/lmplz "\
-              "-o {} ".format(NGRAM) + \
+        command = self.path_to_moses + "bin/lmplz "\
+              "-o {} ".format(self.NGRAM) + \
               "--text " + datafile + \
               " --arpa " + lm_file + \
               " >> {} 2>&1".format(self.lmdir + "lm.out")
@@ -59,7 +57,7 @@ class Train(object):
         Binarizes the 2 target language model files for faster loading.
         Recommended for larger languages
         """
-        command = path_to_moses_decoder + "bin/build_binary " + \
+        command = self.path_to_moses + "bin/build_binary " + \
             lm_file + " " + blm_file + " >> {} 2>&1".format(self.lmdir + "blm.out")
         subprocess.call(command, shell=True)
 
@@ -86,16 +84,16 @@ class Train(object):
 
         utilities.make_dir(working_dir)
         self._print("Training model at {}. This may take a while... ".format(working_dir))
-        trainer = path_to_moses_decoder + "scripts/training/train-model.perl"
+        trainer = self.path_to_moses + "scripts/training/train-model.perl"
         command = "cd {};".format(working_dir) +\
             " nohup nice " + trainer + \
             " -root-dir train -corpus {}".format(fileroot) + \
             " -f {} -e {} -alignment".format(file1_ext, file2_ext) + \
             " grow-diag-final-and -reordering msd-bidirectional-fe" + \
             " -lm 0:3:{}:8".format(blm) + \
-            " -cores {}".format(NCPUS) + \
+            " -cores {}".format(self.NCPUS) + \
             " -mgiza --parallel" + \
-            " -external-bin-dir " + path_to_moses_decoder + "tools/mgizapp/" + \
+            " -external-bin-dir " + self.path_to_moses + "tools/mgizapp/" + \
             " >& {};".format(log) + \
             " cd .."
         subprocess.call(command, shell=True)
@@ -108,3 +106,22 @@ class Train(object):
         while s1[index] == s2[index]:
             index += 1
         return s1[:index].rfind('.')
+
+def main():
+    config = utilities.config_file_reader()
+    path_to_moses = utilities.safe_string(config.get("Environment Settings", "path_to_moses_decoder"))
+    NGRAM = config.getint("Environment Settings", "ngram")
+    NCPUS = config.getint("Environment Settings", "ncpus")
+
+    trainer = Train(path_to_moses, NCPUS, NGRAM)
+    trainer.build_language_models("data/train/europarl-v7.es-en.en.tok.cleansed.train")
+    trainer.build_language_models("data/train/europarl-v7.fr-en.fr.tok.cleansed.train")
+
+    trainer.train("data/train/europarl-v7.es-en.es.tok.cleansed.train",
+        "data/train/europarl-v7.es-en.en.tok.cleansed.train", "es-en.working")
+    trainer.train("data/train/europarl-v7.fr-en.en.tok.cleansed.train",
+        "data/train/europarl-v7.fr-en.fr.tok.cleansed.train", "en-fr.working")
+
+
+if __name__ == '__main__':
+    main()
