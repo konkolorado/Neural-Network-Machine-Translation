@@ -72,3 +72,28 @@ def config_file_reader():
 def safe_string(s):
     """ Returns a shell safe quoted version of the provided string """
     return quote(s)
+
+def validate_config():
+    """
+    Creates a config parser object out of the config.ini file. Error
+    checks the file for any mistakes
+    """
+    cf = config_file_reader()
+    validate_splits(cf)
+
+def valid_splits():
+    return
+
+    """
+    Checks the user supplied valid train, test split values. The
+    two values are valid if their sum is no more than 1
+    """
+    """
+    train = config.getfloat("Iteration Settings", "train_split")
+    test = config.getfloat("Iteration Settings", "test_split")
+    valid = train + test <= 1.0
+
+    if not valid:
+        except ConfigError(f"Train and Test split values of {train}, {test} "
+            "are invalid")
+    """
