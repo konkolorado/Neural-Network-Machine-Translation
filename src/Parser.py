@@ -52,12 +52,16 @@ class Parser(object):
                 src_file + "\n")
             sys.exit()
 
+    def tokenize_files(self, files):
+        for f in files:
+            self.tokenize(f)
+
     def tokenize(self, src_file):
         """
         Tokenize the file provided using the mosesdecoder script
         by splitting the symbols in the sentences to be space-delimited
         """
-        self._validate_file(src_file)
+        #self._validate_file(src_file)
         dest_file = self.destdir + utilities.strip_filename_from_path(src_file) + ".tok"
         if utilities.file_exists(dest_file):
             return
