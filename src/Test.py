@@ -76,6 +76,7 @@ class Test(object):
         Given two files containing src and target data, returns the bleu score
         """
         self._print("Translating between langs in {}.\n\tSaving to {}... ".format(working_dir, result))
+
         command ="nohup nice " + \
             self.path_to_moses + "bin/moses"+\
             " -f {}/moses.ini <".format(filt_dir) + \

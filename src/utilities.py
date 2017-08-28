@@ -71,6 +71,29 @@ def safe_string(s):
     """ Returns a shell safe quoted version of the provided string """
     return quote(s)
 
+def same_until_char(s1, s2, symbol):
+    """
+    Returns True if strings s1 and s2 are the same up until a given symbol,
+    after which they must be different.
+    """
+    index = 0
+    while index < len(s1) and index < len(s2) and s1[index] == s2[index]:
+        index += 1
+
+    if index == 0:
+        print("index 0")
+        return False
+    if index == max(len(s1), len(s2)):
+        print("max len", index)
+        return False
+
+    symbol_pos = s1[:index].rfind(symbol)
+    if symbol_pos == -1:
+        print("no symbol")
+        return False
+
+    return True
+
 def validate_config():
     """
     Creates a config parser object out of the config.ini file. Error
